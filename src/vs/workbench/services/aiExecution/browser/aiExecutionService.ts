@@ -1,10 +1,10 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 2 Authoritative File Mutation Control
+ *  AI Execution Kernel — Phase 3 Execution Graph Engine
  *  Real-vibecode VS Code Fork
  *
  *  AIExecutionService — Concrete implementation of IAIExecutionService.
- *  Phase 2: Authoritative gateway with mutation source tagging, recursion safety,
- *  structured execution records, and integration with IBulkEditService pipeline.
+ *  Phase 3: Integrates with ExecutionGraphService — every mutation creates
+ *  graph nodes, resolves edges, and persists to the causal DAG.
  *--------------------------------------------------------------------------------------------*/
 
 import { URI } from '../../../../base/common/uri.js';
@@ -15,7 +15,6 @@ import { ILogService } from '../../../../platform/log/common/log.js';
 import { IEditorService } from '../../editor/common/editorService.js';
 import { ITextFileService } from '../../textfile/common/textfiles.js';
 import { IBulkEditService, IBulkEditOptions, IBulkEditResult, ResourceEdit, ResourceTextEdit } from '../../../../editor/browser/services/bulkEditService.js';
-import { WorkspaceEdit } from '../../../../editor/common/languages.js';
 import { IProgress, IProgressStep, Progress } from '../../../../platform/progress/common/progress.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { UndoRedoGroup, UndoRedoSource } from '../../../../platform/undoRedo/common/undoRedo.js';
@@ -24,21 +23,22 @@ import {
 	IAIExecutionRecord, IAIMutationContext, IAIControlledBulkEditOptions,
 	AIMutationSource, AIMutationBypassToken, AIMutationPolicyResult, IAIMutationPolicy
 } from '../common/aiExecutionService.js';
+import {
+	IExecutionGraphService, ExecutionNodeType, ExecutionEdgeType, RollbackStrategy,
+	IExecutionNode
+} from '../common/executionGraphService.js';
 
 // ─── Default Mutation Policy ───────────────────────────────────────────────────
 
 class DefaultMutationPolicy implements IAIMutationPolicy {
 	evaluate(ctx: IAIMutationContext, _edits: IAIFileEdit[]): AIMutationPolicyResult {
-		// Phase 2 policy: AI-sourced mutations from trusted contexts are allowed.
-		// Untrusted mutations are allowed but logged as untrusted.
-		// Future phases will add path-based rules and approval UI.
 		if (ctx.bypassToken) {
-			return AIMutationPolicyResult.Allow; // Internal bypass — always allowed
+			return AIMutationPolicyResult.Allow;
 		}
 		if (ctx.source === AIMutationSource.AIAgent || ctx.source === AIMutationSource.AIInternal) {
 			return ctx.trusted ? AIMutationPolicyResult.Allow : AIMutationPolicyResult.RequireApproval;
 		}
-		return AIMutationPolicyResult.Allow; // User/workspace edits always allowed
+		return AIMutationPolicyResult.Allow;
 	}
 }
 
@@ -50,27 +50,27 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 
 	// ─── Private State ─────────────────────────────────────────────────────────
 
-	/** Execution history — structured records for graph-compatible audit trail */
+	/** Execution history — kept for backward compatibility, but primary data is now the graph */
 	private readonly _history: IAIExecutionRecord[] = [];
 
-	/** Registered actions — map from action ID to the action implementation */
+	/** Registered actions */
 	private readonly _actions = new Map<string, IAIAction<unknown, unknown>>();
 
 	/** Event emitter for execution history changes */
 	private readonly _onDidRecordExecution = this._register(new Emitter<IAIExecutionRecord>());
 	readonly onDidRecordExecution = this._onDidRecordExecution.event;
 
-	/** Active bypass tokens — only valid during internal mutation application */
+	/** Active bypass tokens */
 	private readonly _activeBypassTokens = new Set<number>();
 
-	/** The currently active mutation context (for recursion safety) */
+	/** Active mutation context */
 	private _activeMutationContext: IAIMutationContext | undefined;
 	get activeMutationContext(): IAIMutationContext | undefined { return this._activeMutationContext; }
 
-	/** Mutation policy evaluator */
+	/** Mutation policy */
 	private readonly _policy = new DefaultMutationPolicy();
 
-	/** Active execution stack depth — for detecting nested mutations */
+	/** Execution stack depth */
 	private _executionStackDepth = 0;
 
 	// ─── Constructor (DI-injected dependencies) ────────────────────────────────
@@ -80,9 +80,10 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 		@IEditorService private readonly editorService: IEditorService,
 		@ITextFileService private readonly textFileService: ITextFileService,
 		@IBulkEditService private readonly bulkEditService: IBulkEditService,
+		@IExecutionGraphService private readonly graphService: IExecutionGraphService,
 	) {
 		super();
-		this.logService.trace('[AIExecutionService] Phase 2 authoritative kernel initialized');
+		this.logService.trace('[AIExecutionService] Phase 3 graph-integrated kernel initialized');
 	}
 
 	// ─── Recursion Safety ──────────────────────────────────────────────────────
@@ -90,7 +91,6 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 	createBypassToken(executionId: string): AIMutationBypassToken {
 		const token = new AIMutationBypassToken(executionId);
 		this._activeBypassTokens.add(token.id);
-		this.logService.trace(`[AIExecutionService] Bypass token created: ${token.id} for execution: ${executionId}`);
 		return token;
 	}
 
@@ -100,7 +100,6 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 
 	revokeBypassToken(token: AIMutationBypassToken): void {
 		this._activeBypassTokens.delete(token.id);
-		this.logService.trace(`[AIExecutionService] Bypass token revoked: ${token.id}`);
 	}
 
 	// ─── Mutation Context ──────────────────────────────────────────────────────
@@ -115,55 +114,89 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 		};
 	}
 
-	// ─── Authoritative File Mutation ───────────────────────────────────────────
+	// ─── Authoritative File Mutation (Graph-Integrated) ────────────────────────
 
 	async requestFileEdit(edit: IAIFileEdit, context?: IAIMutationContext): Promise<void> {
 		const entryId = generateUuid();
 		const mutationCtx = context ?? this.createAIContext(`requestFileEdit: ${edit.resource.toString()}`);
 		const isBypass = mutationCtx.bypassToken && this.isBypassTokenValid(mutationCtx.bypassToken);
 
-		this.logService.trace(`[AIExecutionService] requestFileEdit: ${edit.resource.toString()} L${edit.rangeStartLineNumber}-${edit.rangeEndLineNumber} source=${mutationCtx.source} bypass=${!!isBypass}`);
+		this.logService.trace(`[AIExecutionService] requestFileEdit: ${edit.resource.toString()} source=${mutationCtx.source} bypass=${!!isBypass}`);
 
-		// Policy validation — skip for bypassed mutations (internal applies)
+		// Policy validation
 		if (!isBypass) {
 			const policyResult = this._policy.evaluate(mutationCtx, [edit]);
 			if (policyResult === AIMutationPolicyResult.Deny) {
-				const record = this._createRecord(entryId, mutationCtx, edit.resource, 1, 'fileEdit', `Edit denied by policy: ${edit.resource.fsPath}`, false, undefined, 'Mutation denied by policy');
-				this._recordEntry(record);
+				// Create a denied node in the graph
+				const node = this.graphService.createNode({
+					type: ExecutionNodeType.FileEdit,
+					label: `Denied: ${edit.resource.fsPath}`,
+					mutationSource: mutationCtx.source,
+					trusted: mutationCtx.trusted,
+					description: 'Mutation denied by policy',
+					fileUri: edit.resource,
+					editCount: 1,
+					reversible: false,
+					rollbackStrategy: RollbackStrategy.Irreversible,
+					scopeId: mutationCtx.parentExecutionId,
+				});
+				this.graphService.completeNode(node.id, { success: false, error: 'Mutation denied by policy' });
 				throw new Error(`AIExecutionService: Mutation denied by policy for ${edit.resource.toString()}`);
-			}
-			if (policyResult === AIMutationPolicyResult.RequireApproval) {
-				// Phase 2: Auto-approve with logging. Future: show approval UI.
-				this.logService.info(`[AIExecutionService] Mutation requires approval (auto-approved in Phase 2): ${edit.resource.toString()}`);
 			}
 		}
 
-		// Create bypass token for the internal apply — prevents recursive interception
-		const bypassToken = this.createBypassToken(entryId);
+		// ── PIPELINE: Create graph node → resolve edges → apply → complete node ──
+
+		let beforeChecksum: string | undefined;
+		try {
+			const model = await this.textFileService.files.resolve(edit.resource);
+			if (!model || !model.textEditorModel) {
+				throw new Error(`Cannot resolve text model for ${edit.resource.toString()}`);
+			}
+			beforeChecksum = this._computeChecksum(model.textEditorModel.getValue());
+		} catch (err) {
+			// Can't resolve model — still create node but without checksum
+		}
+
+		// STEP 1: Create graph node (pending state)
+		const graphNode = this.graphService.createNode({
+			type: ExecutionNodeType.FileEdit,
+			label: `Edit ${edit.resource.fsPath} L${edit.rangeStartLineNumber}-${edit.rangeEndLineNumber}`,
+			mutationSource: mutationCtx.source,
+			trusted: mutationCtx.trusted,
+			description: mutationCtx.description,
+			fileUri: edit.resource,
+			beforeChecksum,
+			editCount: 1,
+			reversible: true,
+			rollbackStrategy: RollbackStrategy.InverseEdit,
+			scopeId: mutationCtx.parentExecutionId,
+		});
+
+		// STEP 2: Create causal edge from parent if available
+		if (mutationCtx.parentExecutionId) {
+			this.graphService.createEdge(mutationCtx.parentExecutionId, graphNode.id, ExecutionEdgeType.CausedBy);
+		}
+
+		// STEP 3: Apply the mutation with bypass token
+		const bypassToken = this.createBypassToken(graphNode.id);
 
 		try {
-			// Resolve the text file model for the target resource
 			const model = await this.textFileService.files.resolve(edit.resource);
-
 			if (!model || !model.textEditorModel) {
 				throw new Error(`Cannot resolve text model for ${edit.resource.toString()}`);
 			}
 
-			// Compute before checksum
-			const beforeChecksum = this._computeChecksum(model.textEditorModel.getValue());
-
-			// Track execution depth for recursion detection
 			const prevContext = this._activeMutationContext;
 			this._activeMutationContext = mutationCtx;
 			this._executionStackDepth++;
 
 			if (this._executionStackDepth > 10) {
-				throw new Error(`AIExecutionService: Recursion depth exceeded (${this._executionStackDepth}). Possible infinite mutation loop.`);
+				throw new Error(`AIExecutionService: Recursion depth exceeded. Possible infinite mutation loop.`);
 			}
 
+			let afterChecksum: string | undefined;
 			try {
-				// Apply using pushEditOperations — PRESERVES UNDO STACK
-				// This is the correct VS Code pattern (not applyEdits which bypasses undo)
 				model.textEditorModel.pushEditOperations(
 					null,
 					[{
@@ -175,28 +208,35 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 						},
 						text: edit.newText,
 					}],
-					() => null // No cursor state computer — AI edits don't control cursor
+					() => null
 				);
+				afterChecksum = this._computeChecksum(model.textEditorModel.getValue());
 			} finally {
 				this._executionStackDepth--;
 				this._activeMutationContext = prevContext;
 			}
 
-			// Compute after checksum
-			const afterChecksum = this._computeChecksum(model.textEditorModel.getValue());
+			// STEP 4: Complete the graph node with success
+			this.graphService.completeNode(graphNode.id, {
+				success: true,
+				afterChecksum,
+			});
 
-			// Record successful execution
+			// Also record in legacy history for backward compatibility
 			const record = this._createRecord(entryId, mutationCtx, edit.resource, 1, 'fileEdit',
-				`Edit ${edit.resource.fsPath} L${edit.rangeStartLineNumber}:${edit.rangeStartColumn}-L${edit.rangeEndLineNumber}:${edit.rangeEndColumn}`,
+				`Edit ${edit.resource.fsPath} L${edit.rangeStartLineNumber}-${edit.rangeEndLineNumber}`,
 				true, beforeChecksum, undefined, afterChecksum);
 			this._recordEntry(record);
 
-			this.logService.info(`[AIExecutionService] File edit applied (undo-safe): ${edit.resource.toString()}`);
 		} catch (err) {
-			// Record failed execution
+			// STEP 4 (failure): Complete the graph node with error
+			this.graphService.completeNode(graphNode.id, {
+				success: false,
+				error: String(err),
+			});
+
 			const record = this._createRecord(entryId, mutationCtx, edit.resource, 1, 'fileEdit',
-				`Edit ${edit.resource.fsPath} L${edit.rangeStartLineNumber}:${edit.rangeStartColumn}-L${edit.rangeEndLineNumber}:${edit.rangeEndColumn}`,
-				false, undefined, String(err));
+				`Edit ${edit.resource.fsPath} FAILED`, false, beforeChecksum, String(err));
 			this._recordEntry(record);
 
 			this.logService.error(`[AIExecutionService] File edit failed: ${String(err)}`);
@@ -206,27 +246,45 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 		}
 	}
 
-	// ─── Workspace Edit Pipeline ───────────────────────────────────────────────
+	// ─── Workspace Edit Pipeline (Graph-Integrated) ────────────────────────────
 
 	async applyWorkspaceEdit(edits: ResourceEdit[], options?: IAIControlledBulkEditOptions): Promise<IBulkEditResult> {
 		const entryId = generateUuid();
 		const mutationCtx = options?.aiContext ?? this.createAIContext(`applyWorkspaceEdit: ${edits.length} edits`);
-		const isBypass = mutationCtx.bypassToken && this.isBypassTokenValid(mutationCtx.bypassToken);
 
-		this.logService.trace(`[AIExecutionService] applyWorkspaceEdit: ${edits.length} edits source=${mutationCtx.source} bypass=${!!isBypass}`);
-
-		// Count text edits for the record
 		const textEdits = edits.filter(e => e instanceof ResourceTextEdit) as ResourceTextEdit[];
 		const affectedUris = new Set<string>();
-		for (const e of textEdits) {
-			affectedUris.add(e.resource.toString());
+		for (const e of textEdits) { affectedUris.add(e.resource.toString()); }
+
+		// STEP 1: Create graph node for the workspace edit (parent node)
+		const graphNode = this.graphService.createNode({
+			type: ExecutionNodeType.WorkspaceEdit,
+			label: options?.label ?? `Workspace Edit (${edits.length} edits)`,
+			mutationSource: mutationCtx.source,
+			trusted: mutationCtx.trusted,
+			description: mutationCtx.description,
+			fileUri: textEdits.length > 0 ? textEdits[0].resource : undefined,
+			additionalFileUris: textEdits.length > 1 ? textEdits.slice(1).map(e => e.resource) : [],
+			editCount: textEdits.length,
+			reversible: true,
+			rollbackStrategy: RollbackStrategy.VSCodeUndo,
+		});
+
+		// STEP 2: Begin execution scope — child nodes will auto-link to this parent
+		const scope = this.graphService.beginScope(
+			`Workspace Edit ${graphNode.id.slice(0, 8)}`,
+			graphNode.id,
+			mutationCtx.source
+		);
+
+		// STEP 3: Create causal edge from parent if available
+		if (mutationCtx.parentExecutionId) {
+			this.graphService.createEdge(mutationCtx.parentExecutionId, graphNode.id, ExecutionEdgeType.CausedBy);
 		}
 
-		// Create bypass token for internal apply
-		const bypassToken = this.createBypassToken(entryId);
+		const bypassToken = this.createBypassToken(graphNode.id);
 
 		try {
-			// Delegate to IBulkEditService — preserves all batching, preview, undo, cancellation semantics
 			const bulkOptions: IBulkEditOptions = {
 				editor: options?.editor,
 				progress: options?.progress ?? Progress.None,
@@ -247,7 +305,7 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 			this._executionStackDepth++;
 
 			if (this._executionStackDepth > 10) {
-				throw new Error(`AIExecutionService: Recursion depth exceeded (${this._executionStackDepth}). Possible infinite mutation loop.`);
+				throw new Error(`AIExecutionService: Recursion depth exceeded.`);
 			}
 
 			let result: IBulkEditResult;
@@ -258,53 +316,47 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 				this._activeMutationContext = prevContext;
 			}
 
-			// Record successful execution
+			// STEP 4: Complete graph node + end scope
+			this.graphService.completeNode(graphNode.id, { success: true });
+			this.graphService.endScope(scope.id);
+
+			// Legacy history record
 			const primaryUri = textEdits.length > 0 ? textEdits[0].resource : URI.parse('untitled:bulk-edit');
 			const record = this._createRecord(entryId, mutationCtx, primaryUri, textEdits.length, 'bulkEdit',
-				`Workspace edit: ${edits.length} edits across ${affectedUris.size} files`,
-				true);
+				`Workspace edit: ${edits.length} edits across ${affectedUris.size} files`, true);
 			this._recordEntry(record);
 
-			this.logService.info(`[AIExecutionService] Workspace edit applied: ${edits.length} edits`);
 			return result;
 		} catch (err) {
+			this.graphService.completeNode(graphNode.id, { success: false, error: String(err) });
+			this.graphService.endScope(scope.id);
+
 			const primaryUri = textEdits.length > 0 ? textEdits[0].resource : URI.parse('untitled:bulk-edit');
 			const record = this._createRecord(entryId, mutationCtx, primaryUri, textEdits.length, 'bulkEdit',
-				`Workspace edit FAILED: ${edits.length} edits`,
-				false, undefined, String(err));
+				`Workspace edit FAILED`, false, undefined, String(err));
 			this._recordEntry(record);
 
-			this.logService.error(`[AIExecutionService] Workspace edit failed: ${String(err)}`);
 			throw err;
 		} finally {
 			this.revokeBypassToken(bypassToken);
 		}
 	}
 
-	// ─── Workspace Mutation (legacy → delegates to applyWorkspaceEdit) ─────────
+	// ─── Workspace Mutation ────────────────────────────────────────────────────
 
 	async applyWorkspaceChange(change: IAIWorkspaceChange, context?: IAIMutationContext): Promise<void> {
 		const mutationCtx = context ?? this.createAIContext(change.description, undefined);
-		this.logService.trace(`[AIExecutionService] applyWorkspaceChange: ${change.id} (${change.edits.length} edits)`);
-
-		// Convert IAIFileEdit[] to ResourceTextEdit[] for the bulk edit pipeline
 		const resourceEdits: ResourceEdit[] = change.edits.map(edit =>
-			new ResourceTextEdit(
-				edit.resource,
-				{
-					range: {
-						startLineNumber: edit.rangeStartLineNumber,
-						startColumn: edit.rangeStartColumn,
-						endLineNumber: edit.rangeEndLineNumber,
-						endColumn: edit.rangeEndColumn,
-					},
-					text: edit.newText,
+			new ResourceTextEdit(edit.resource, {
+				range: {
+					startLineNumber: edit.rangeStartLineNumber,
+					startColumn: edit.rangeStartColumn,
+					endLineNumber: edit.rangeEndLineNumber,
+					endColumn: edit.rangeEndColumn,
 				},
-				undefined, // versionId
-				undefined  // metadata
-			)
+				text: edit.newText,
+			}, undefined, undefined)
 		);
-
 		await this.applyWorkspaceEdit(resourceEdits, {
 			aiContext: mutationCtx,
 			label: change.description,
@@ -312,35 +364,39 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 		});
 	}
 
-	// ─── Terminal Execution (Phase 2 Stub) ─────────────────────────────────────
+	// ─── Terminal Execution (Stub) ─────────────────────────────────────────────
 
 	async requestTerminalExecution(execution: IAITerminalExecution): Promise<void> {
 		const entryId = generateUuid();
-		this.logService.trace(`[AIExecutionService] requestTerminalExecution (STUB): ${execution.command}`);
+
+		// Create graph node for terminal execution
+		const graphNode = this.graphService.createNode({
+			type: ExecutionNodeType.TerminalExecution,
+			label: `Terminal: ${execution.command.slice(0, 50)}`,
+			mutationSource: AIMutationSource.AIAgent,
+			trusted: true,
+			description: `Terminal stub: ${execution.command}`,
+			editCount: 0,
+			reversible: false,
+			rollbackStrategy: RollbackStrategy.Irreversible,
+		});
+		this.graphService.completeNode(graphNode.id, { success: true });
 
 		const record = this._createRecord(entryId,
 			{ source: AIMutationSource.AIAgent, executionId: entryId, parentExecutionId: undefined, trusted: true },
 			URI.parse('terminal:stub'), 0, 'terminalExecution',
 			`Terminal request (stub): ${execution.command}`, true);
 		this._recordEntry(record);
-
-		this.logService.info(`[AIExecutionService] Terminal execution recorded (stub): ${execution.command}`);
 	}
 
 	// ─── Action Registry ───────────────────────────────────────────────────────
 
 	registerAction<TArgs = unknown, TResult = unknown>(action: IAIAction<TArgs, TResult>): IDisposable {
 		if (this._actions.has(action.id)) {
-			this.logService.warn(`[AIExecutionService] Action "${action.id}" is being re-registered`);
+			this.logService.warn(`[AIExecutionService] Action "${action.id}" re-registered`);
 		}
-
 		this._actions.set(action.id, action as IAIAction<unknown, unknown>);
-		this.logService.trace(`[AIExecutionService] Action registered: ${action.id}`);
-
-		return toDisposable(() => {
-			this._actions.delete(action.id);
-			this.logService.trace(`[AIExecutionService] Action unregistered: ${action.id}`);
-		});
+		return toDisposable(() => { this._actions.delete(action.id); });
 	}
 
 	// ─── Execution History ─────────────────────────────────────────────────────
@@ -352,32 +408,14 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 	// ─── Private Helpers ───────────────────────────────────────────────────────
 
 	private _createRecord(
-		id: string,
-		ctx: IAIMutationContext,
-		fileUri: URI,
-		editCount: number,
-		type: IAIExecutionRecord['type'],
-		description: string,
-		success: boolean,
-		beforeChecksum?: string,
-		error?: string,
-		afterChecksum?: string,
+		id: string, ctx: IAIMutationContext, fileUri: URI, editCount: number,
+		type: IAIExecutionRecord['type'], description: string, success: boolean,
+		beforeChecksum?: string, error?: string, afterChecksum?: string,
 	): IAIExecutionRecord {
 		return {
-			id,
-			timestamp: Date.now(),
-			mutationSource: ctx.source,
-			fileUri,
-			editCount,
-			beforeChecksum,
-			afterChecksum,
-			trusted: ctx.trusted,
-			rolledBack: false,
-			parentExecutionId: ctx.parentExecutionId,
-			type,
-			description,
-			success,
-			error,
+			id, timestamp: Date.now(), mutationSource: ctx.source, fileUri, editCount,
+			beforeChecksum, afterChecksum, trusted: ctx.trusted, rolledBack: false,
+			parentExecutionId: ctx.parentExecutionId, type, description, success, error,
 		};
 	}
 
@@ -386,17 +424,11 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 		this._onDidRecordExecution.fire(record);
 	}
 
-	/**
-	 * Simple checksum computation for file content.
-	 * Phase 2 uses a fast hash for recording. Future phases may use
-	 * full SHA-256 for integrity verification.
-	 */
 	private _computeChecksum(content: string): string {
-		// FNV-1a hash — fast, good distribution, sufficient for change detection
-		let hash = 2166136261; // FNV offset basis
+		let hash = 2166136261;
 		for (let i = 0; i < content.length; i++) {
 			hash ^= content.charCodeAt(i);
-			hash = (hash * 16777619) >>> 0; // FNV prime, unsigned
+			hash = (hash * 16777619) >>> 0;
 		}
 		return hash.toString(16).padStart(8, '0');
 	}
@@ -408,6 +440,5 @@ export class AIExecutionService extends Disposable implements IAIExecutionServic
 		this._history.length = 0;
 		this._activeBypassTokens.clear();
 		super.dispose();
-		this.logService.trace('[AIExecutionService] Disposed');
 	}
 }
