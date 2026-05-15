@@ -1,0 +1,94 @@
+{
+	"nameShort": "Real Vibecode",
+	"nameLong": "Real Vibecode",
+	"applicationName": "real-vibecode",
+	"dataFolderName": ".real-vibecode",
+	"sharedDataFolderName": ".real-vibecode-shared",
+	"win32MutexName": "realvibecode",
+	"licenseName": "MIT",
+	"licenseUrl": "https://github.com/Razisafir/Real-vibecode/blob/main/LICENSE.txt",
+	"serverLicenseUrl": "https://github.com/Razisafir/Real-vibecode/blob/main/LICENSE.txt",
+	"serverGreeting": [],
+	"serverLicense": [],
+	"serverLicensePrompt": "",
+	"serverApplicationName": "real-vibecode-server",
+	"serverDataFolderName": ".real-vibecode-server",
+	"tunnelApplicationName": "real-vibecode-tunnel",
+	"win32DirName": "Real Vibecode",
+	"win32NameVersion": "Real Vibecode",
+	"win32RegValueName": "RealVibecode",
+	"win32x64AppId": "{{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}",
+	"win32arm64AppId": "{{B2C3D4E5-F6A7-8901-BCDE-F12345678901}",
+	"win32x64UserAppId": "{{C3D4E5F6-A7B8-9012-CDEF-123456789012}",
+	"win32arm64UserAppId": "{{D4E5F6A7-B8C9-0123-DEFA-234567890123}",
+	"win32AppUserModelId": "RealVibecode.IDE",
+	"win32ShellNameShort": "Real &Vibecode",
+	"win32TunnelServiceMutex": "realvibecode-tunnelservice",
+	"win32TunnelMutex": "realvibecode-tunnel",
+	"darwinBundleIdentifier": "com.realvibecode.ide",
+	"darwinProfileUUID": "A1B2C3D4-E5F6-7890-ABCD-EF1234567890",
+	"darwinProfilePayloadUUID": "B2C3D4E5-F6A7-8901-BCDE-F12345678901",
+	"linuxIconName": "real-vibecode",
+	"licenseFileName": "LICENSE.txt",
+	"reportIssueUrl": "https://github.com/Razisafir/Real-vibecode/issues/new",
+	"nodejsRepository": "https://nodejs.org",
+	"urlProtocol": "real-vibecode",
+	"agentsTelemetryAppName": "real-vibecode-agents",
+	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.real-vibecode-cdn.net/insider/ef65ac1ba57f57f2a3961bfe94aa20481caca4c6/out/vs/workbench/contrib/webview/browser/pre/",
+	"builtInExtensions": [],
+	"defaultChatAgent": {},
+	"trustedExtensionAuthAccess": {},
+	"onboardingKeymaps": [
+		{
+			"id": "vscode",
+			"label": "Real Vibecode",
+			"description": "Default keyboard mapping"
+		},
+		{
+			"id": "sublime",
+			"label": "Sublime Text",
+			"extensionId": "ms-vscode.sublime-keybindings",
+			"description": "Keyboard mapping from Sublime Text"
+		},
+		{
+			"id": "intellij",
+			"label": "IntelliJ / JetBrains",
+			"extensionId": "k--kato.intellij-idea-keybindings",
+			"description": "Keyboard mapping from IntelliJ IDEA"
+		},
+		{
+			"id": "vim",
+			"label": "Vim",
+			"extensionId": "vscodevim.vim",
+			"description": "Vim modal editing"
+		}
+	],
+	"onboardingThemes": [
+		{
+			"id": "dark-2026",
+			"label": "Dark 2026",
+			"themeId": "Dark 2026",
+			"type": "dark"
+		},
+		{
+			"id": "hc-dark",
+			"label": "Dark High Contrast",
+			"themeId": "Default High Contrast",
+			"type": "hcDark"
+		},
+		{
+			"id": "light-2026",
+			"label": "Light 2026",
+			"themeId": "Light 2026",
+			"type": "light"
+		},
+		{
+			"id": "hc-light",
+			"label": "Light High Contrast",
+			"themeId": "Default High Contrast Light",
+			"type": "hcLight"
+		}
+	],
+	"builtInExtensionsEnabledWithAutoUpdates": [],
+	"sessionsWindowAllowedExtensions": []
+}

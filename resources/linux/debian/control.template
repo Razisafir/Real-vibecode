@@ -1,0 +1,19 @@
+Package: @@NAME@@
+Version: @@VERSION@@
+Section: devel
+Depends: @@DEPENDS@@
+Recommends: @@RECOMMENDS@@
+Priority: optional
+Architecture: @@ARCHITECTURE@@
+Maintainer: Real Vibecode Project <https://github.com/Razisafir/Real-vibecode>
+Homepage: https://github.com/Razisafir/Real-vibecode
+Installed-Size: @@INSTALLEDSIZE@@
+Provides: real-vibecode
+Conflicts: real-vibecode
+Replaces: real-vibecode
+Description: AI-Native Code Editing. Redefined.
+ Real Vibecode is an AI-native IDE built on a forked architecture,
+ combining the power of an AI execution kernel with a proven code editor
+ foundation. It provides an authoritative mutation control layer and a
+ causal execution graph engine for transparent, auditable AI-driven
+ development.

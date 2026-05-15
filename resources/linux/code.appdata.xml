@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+	<id>real-vibecode.desktop</id>
+	<metadata_license>MIT</metadata_license>
+	<project_license>MIT</project_license>
+	<name>Real Vibecode</name>
+	<url type="homepage">https://github.com/Razisafir/Real-vibecode</url>
+	<summary>Real Vibecode. AI-Native Code Editing. Redefined.</summary>
+	<description>
+		<p>Real Vibecode is an AI-native IDE built on a forked architecture, combining the power of an AI execution kernel with a proven code editor foundation. It provides an authoritative mutation control layer and a causal execution graph engine for transparent, auditable AI-driven development.</p>
+	</description>
+	<screenshots>
+		<screenshot type="default">
+			<image>https://github.com/Razisafir/Real-vibecode/raw/main/docs/assets/screenshot.png</image>
+			<caption>Editing with AI execution kernel integration</caption>
+		</screenshot>
+	</screenshots>
+</component>

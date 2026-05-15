@@ -1,0 +1,19 @@
+[workspace]
+name = "real-vibecode-cli"
+version = "0.1.0"
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+# NOTE: The actual CLI workspace members and binary targets
+# should mirror the upstream VS Code CLI structure.
+# This file provides branding overrides only.
+# The full workspace members list will be merged from upstream
+# during the build process.
+
+[[bin]]
+name = "real-vibecode"
+path = "src/main.rs"
