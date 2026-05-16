@@ -1,9 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 17 System Unification Bridge Layer
+ *  AI Execution Kernel — Phase 18 System Stress Test & Real-World Simulation
  *  Real Vibecode — AI-Native IDE
  *
  *  aiExecution.contribution.ts — Service registration + integration hooks.
- *  Phase 17: Adds System Coherence services (10 new singletons).
+ *  Phase 18: Adds System Stress & Validation services (10 new singletons).
  *
  *  Full Registration Order:
  *    1. IExecutionGraphService (no AI kernel deps)
@@ -75,6 +75,16 @@
  *    67. ISystemConflictResolverService (no AI kernel deps — conflict resolution)
  *    68. IGlobalSystemHealthOrchestratorService (no AI kernel deps — health orchestration)
  *    69. ISystemConsciousnessModelService (no AI kernel deps — consciousness model)
+ *    70. ISystemStressSimulationService (no AI kernel deps — stress simulation)
+ *    71. ISystemDegradationModelService (no AI kernel deps — degradation model)
+ *    72. ICrossLayerFailureInjectionService (no AI kernel deps — failure injection)
+ *    73. ISystemSelfHealingValidationService (no AI kernel deps — self-healing validation)
+ *    74. IRealWorldWorkflowSimulationService (no AI kernel deps — workflow simulation)
+ *    75. ISystemStabilityScoringService (no AI kernel deps — stability scoring)
+ *    76. IEventStormSimulationService (no AI kernel deps — event storm simulation)
+ *    77. IMemoryConsistencyAuditService (no AI kernel deps — memory audit)
+ *    78. ISystemBoundaryDiscoveryService (no AI kernel deps — boundary discovery)
+ *    79. ISystemConsolidationService (no AI kernel deps — consolidation)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -160,6 +170,10 @@ import { WorkflowMomentumService, InterruptionIntelligenceService, SessionContin
 // Phase 17 imports
 import { ISystemCoherenceEngineService, ICrossLayerSignalBusService, ISystemIntentAlignmentService, ILayerSynchronizationService, IGlobalEventNormalizationService, ISystemFeedbackLoopService, ISystemContextMergerService, ISystemConflictResolverService, IGlobalSystemHealthOrchestratorService, ISystemConsciousnessModelService } from '../common/systemCoherence.js';
 import { SystemCoherenceEngineService, CrossLayerSignalBusService, SystemIntentAlignmentService, LayerSynchronizationService, GlobalEventNormalizationService, SystemFeedbackLoopService, SystemContextMergerService, SystemConflictResolverService, GlobalSystemHealthOrchestratorService, SystemConsciousnessModelService } from './systemCoherenceService.js';
+
+// Phase 18 imports
+import { ISystemStressSimulationService, ISystemDegradationModelService, ICrossLayerFailureInjectionService, ISystemSelfHealingValidationService, IRealWorldWorkflowSimulationService, ISystemStabilityScoringService, IEventStormSimulationService, IMemoryConsistencyAuditService, ISystemBoundaryDiscoveryService, ISystemConsolidationService } from '../common/systemStress.js';
+import { SystemStressSimulationService, SystemDegradationModelService, CrossLayerFailureInjectionService, SystemSelfHealingValidationService, RealWorldWorkflowSimulationService, SystemStabilityScoringService, EventStormSimulationService, MemoryConsistencyAuditService, SystemBoundaryDiscoveryService, SystemConsolidationService } from './systemStressService.js';
 
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
@@ -373,6 +387,36 @@ registerSingleton(IGlobalSystemHealthOrchestratorService, GlobalSystemHealthOrch
 
 // Phase 17.69: SystemConsciousnessModelService (no AI kernel deps — consciousness model)
 registerSingleton(ISystemConsciousnessModelService, SystemConsciousnessModelService, InstantiationType.Delayed);
+
+// Phase 18.70: SystemStressSimulationService (no AI kernel deps — stress simulation)
+registerSingleton(ISystemStressSimulationService, SystemStressSimulationService, InstantiationType.Delayed);
+
+// Phase 18.71: SystemDegradationModelService (no AI kernel deps — degradation model)
+registerSingleton(ISystemDegradationModelService, SystemDegradationModelService, InstantiationType.Delayed);
+
+// Phase 18.72: CrossLayerFailureInjectionService (no AI kernel deps — failure injection)
+registerSingleton(ICrossLayerFailureInjectionService, CrossLayerFailureInjectionService, InstantiationType.Delayed);
+
+// Phase 18.73: SystemSelfHealingValidationService (no AI kernel deps — self-healing validation)
+registerSingleton(ISystemSelfHealingValidationService, SystemSelfHealingValidationService, InstantiationType.Delayed);
+
+// Phase 18.74: RealWorldWorkflowSimulationService (no AI kernel deps — workflow simulation)
+registerSingleton(IRealWorldWorkflowSimulationService, RealWorldWorkflowSimulationService, InstantiationType.Delayed);
+
+// Phase 18.75: SystemStabilityScoringService (no AI kernel deps — stability scoring)
+registerSingleton(ISystemStabilityScoringService, SystemStabilityScoringService, InstantiationType.Delayed);
+
+// Phase 18.76: EventStormSimulationService (no AI kernel deps — event storm simulation)
+registerSingleton(IEventStormSimulationService, EventStormSimulationService, InstantiationType.Delayed);
+
+// Phase 18.77: MemoryConsistencyAuditService (no AI kernel deps — memory audit)
+registerSingleton(IMemoryConsistencyAuditService, MemoryConsistencyAuditService, InstantiationType.Delayed);
+
+// Phase 18.78: SystemBoundaryDiscoveryService (no AI kernel deps — boundary discovery)
+registerSingleton(ISystemBoundaryDiscoveryService, SystemBoundaryDiscoveryService, InstantiationType.Delayed);
+
+// Phase 18.79: SystemConsolidationService (no AI kernel deps — consolidation)
+registerSingleton(ISystemConsolidationService, SystemConsolidationService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
