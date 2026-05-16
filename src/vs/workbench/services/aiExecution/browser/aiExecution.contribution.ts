@@ -3,7 +3,7 @@
  *  Real Vibecode -- AI-Native IDE
  *
  *  aiExecution.contribution.ts -- Service registration + integration hooks.
- *  Phase 22: Adds Reality Validation services (10 new singletons #110-119).
+ *  Phase 23: Adds Professional UI services (10 new singletons #120-129).
  *
  *  Full Registration Order:
  *    1. IExecutionGraphService (no AI kernel deps)
@@ -125,6 +125,16 @@
  *   117. IProductionReadinessTruthService (no AI kernel deps -- production readiness truth)
  *   118. IRuntimeRealityBenchmarkService (no AI kernel deps -- runtime reality benchmark)
  *   119. ISystemConvergenceReportService (no AI kernel deps -- system convergence report)
+ *   120. IIconSystemService (no AI kernel deps -- professional iconography)
+ *   121. IDesignTokenService (no AI kernel deps -- design tokens)
+ *   122. IComponentStandardsService (no AI kernel deps -- component standards)
+ *   123. IUIRealityValidationService (no AI kernel deps -- UI reality validation)
+ *   124. IUXReductionService (no AI kernel deps -- UX reduction)
+ *   125. IInteractionPolishService (no AI kernel deps -- interaction polish)
+ *   126. IAccessibilityComplianceService (no AI kernel deps -- accessibility compliance)
+ *   127. IRenderingPerformanceService (no AI kernel deps -- rendering performance)
+ *   128. IProductSurfaceRebuildService (no AI kernel deps -- product surface rebuild)
+ *   129. IProductRealityReportService (no AI kernel deps -- product reality report)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -230,6 +240,10 @@ import { RuntimeKernelService, ExecutionSchedulerService, AgentOrchestrationRunt
 // Phase 22 imports
 import { IRealityValidationService, IExecutionTruthAuditService, IMaintainabilityAnalysisService, IScalabilityRealityService, IOperationalTruthService, IObservabilityCompletenessService, IArchitecturalReductionService, IProductionReadinessTruthService, IRuntimeRealityBenchmarkService, ISystemConvergenceReportService } from '../common/realityValidation.js';
 import { RealityValidationService, ExecutionTruthAuditService, MaintainabilityAnalysisService, ScalabilityRealityService, OperationalTruthService, ObservabilityCompletenessService, ArchitecturalReductionService, ProductionReadinessTruthService, RuntimeRealityBenchmarkService, SystemConvergenceReportService } from './realityValidationService.js';
+
+// Phase 23 imports
+import { IIconSystemService, IDesignTokenService, IComponentStandardsService, IUIRealityValidationService, IUXReductionService, IInteractionPolishService, IAccessibilityComplianceService, IRenderingPerformanceService, IProductSurfaceRebuildService, IProductRealityReportService } from '../common/professionalUI.js';
+import { IconSystemService, DesignTokenService, ComponentStandardsService, UIRealityValidationService, UXReductionService, InteractionPolishService, AccessibilityComplianceService, RenderingPerformanceService, ProductSurfaceRebuildService, ProductRealityReportService } from './professionalUIService.js';
 
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
@@ -593,6 +607,36 @@ registerSingleton(IRuntimeRealityBenchmarkService, RuntimeRealityBenchmarkServic
 
 // Phase 22.119: SystemConvergenceReportService (no AI kernel deps -- system convergence report)
 registerSingleton(ISystemConvergenceReportService, SystemConvergenceReportService, InstantiationType.Delayed);
+
+// Phase 23.120: IconSystemService (no AI kernel deps -- professional iconography)
+registerSingleton(IIconSystemService, IconSystemService, InstantiationType.Delayed);
+
+// Phase 23.121: DesignTokenService (no AI kernel deps -- design tokens)
+registerSingleton(IDesignTokenService, DesignTokenService, InstantiationType.Delayed);
+
+// Phase 23.122: ComponentStandardsService (no AI kernel deps -- component standards)
+registerSingleton(IComponentStandardsService, ComponentStandardsService, InstantiationType.Delayed);
+
+// Phase 23.123: UIRealityValidationService (no AI kernel deps -- UI reality validation)
+registerSingleton(IUIRealityValidationService, UIRealityValidationService, InstantiationType.Delayed);
+
+// Phase 23.124: UXReductionService (no AI kernel deps -- UX reduction)
+registerSingleton(IUXReductionService, UXReductionService, InstantiationType.Delayed);
+
+// Phase 23.125: InteractionPolishService (no AI kernel deps -- interaction polish)
+registerSingleton(IInteractionPolishService, InteractionPolishService, InstantiationType.Delayed);
+
+// Phase 23.126: AccessibilityComplianceService (no AI kernel deps -- accessibility compliance)
+registerSingleton(IAccessibilityComplianceService, AccessibilityComplianceService, InstantiationType.Delayed);
+
+// Phase 23.127: RenderingPerformanceService (no AI kernel deps -- rendering performance)
+registerSingleton(IRenderingPerformanceService, RenderingPerformanceService, InstantiationType.Delayed);
+
+// Phase 23.128: ProductSurfaceRebuildService (no AI kernel deps -- product surface rebuild)
+registerSingleton(IProductSurfaceRebuildService, ProductSurfaceRebuildService, InstantiationType.Delayed);
+
+// Phase 23.129: ProductRealityReportService (no AI kernel deps -- product reality report)
+registerSingleton(IProductRealityReportService, ProductRealityReportService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
