@@ -1,9 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 15 Production Surface Rebuild
+ *  AI Execution Kernel — Phase 16 Human Workflow Engine
  *  Real Vibecode — AI-Native IDE
  *
  *  aiExecution.contribution.ts — Service registration + integration hooks.
- *  Phase 15: Adds Production Surface services (10 new singletons).
+ *  Phase 16: Adds Human Workflow services (10 new singletons).
  *
  *  Full Registration Order:
  *    1. IObservabilityService (no AI kernel deps)
@@ -55,6 +55,16 @@
  *    47. IVisualPolishService (no AI kernel deps — typography & iconography)
  *    48. IProductionUXValidationService (no AI kernel deps — production quality)
  *    49. ISignatureProductFeelService (no AI kernel deps — emotional identity)
+ *    50. IWorkflowMomentumService (no AI kernel deps — momentum tracking)
+ *    51. IInterruptionIntelligenceService (no AI kernel deps — interruption management)
+ *    52. ISessionContinuityService (no AI kernel deps — session persistence)
+ *    53. ICognitiveRecoveryService (no AI kernel deps — fatigue recovery)
+ *    54. IWorkRhythmService (no AI kernel deps — rhythm learning)
+ *    55. IIntentPersistenceService (no AI kernel deps — intent tracking)
+ *    56. IEmotionalFrictionService (no AI kernel deps — friction inference)
+ *    57. IWorkspaceMemoryService (no AI kernel deps — workspace memory)
+ *    58. IHumanWorkflowValidationService (no AI kernel deps — workflow validation)
+ *    59. ISignatureHumanExperienceModelService (no AI kernel deps — human experience)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -132,6 +142,10 @@ import { ProgressiveDisclosureService, UserExperienceProfileService, AdaptiveInt
 // Phase 15 imports
 import { IWorkbenchShellService, ISurfaceMaterialService, IEditorDominanceService, IAISurfaceExperienceService, IExecutionTimelineExperienceService, ICinematicMotionService, IExperienceStateSurfaceService, IVisualPolishService, IProductionUXValidationService, ISignatureProductFeelService } from '../common/productionSurface.js';
 import { WorkbenchShellService, SurfaceMaterialService, EditorDominanceService, AISurfaceExperienceService, ExecutionTimelineExperienceService, CinematicMotionService, ExperienceStateSurfaceService, VisualPolishService, ProductionUXValidationService, SignatureProductFeelService } from './productionSurfaceService.js';
+
+// Phase 16 imports
+import { IWorkflowMomentumService, IInterruptionIntelligenceService, ISessionContinuityService, ICognitiveRecoveryService, IWorkRhythmService, IIntentPersistenceService, IEmotionalFrictionService, IWorkspaceMemoryService, IHumanWorkflowValidationService, ISignatureHumanExperienceModelService } from '../common/humanWorkflow.js';
+import { WorkflowMomentumService, InterruptionIntelligenceService, SessionContinuityService, CognitiveRecoveryService, WorkRhythmService, IntentPersistenceService, EmotionalFrictionService, WorkspaceMemoryService, HumanWorkflowValidationService, SignatureHumanExperienceModelService } from './humanWorkflowService.js';
 
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
@@ -285,6 +299,36 @@ registerSingleton(IProductionUXValidationService, ProductionUXValidationService,
 
 // Phase 15.49: SignatureProductFeelService (no AI kernel deps — emotional identity)
 registerSingleton(ISignatureProductFeelService, SignatureProductFeelService, InstantiationType.Delayed);
+
+// Phase 16.50: WorkflowMomentumService (no AI kernel deps — momentum tracking)
+registerSingleton(IWorkflowMomentumService, WorkflowMomentumService, InstantiationType.Delayed);
+
+// Phase 16.51: InterruptionIntelligenceService (no AI kernel deps — interruption management)
+registerSingleton(IInterruptionIntelligenceService, InterruptionIntelligenceService, InstantiationType.Delayed);
+
+// Phase 16.52: SessionContinuityService (no AI kernel deps — session persistence)
+registerSingleton(ISessionContinuityService, SessionContinuityService, InstantiationType.Delayed);
+
+// Phase 16.53: CognitiveRecoveryService (no AI kernel deps — fatigue recovery)
+registerSingleton(ICognitiveRecoveryService, CognitiveRecoveryService, InstantiationType.Delayed);
+
+// Phase 16.54: WorkRhythmService (no AI kernel deps — rhythm learning)
+registerSingleton(IWorkRhythmService, WorkRhythmService, InstantiationType.Delayed);
+
+// Phase 16.55: IntentPersistenceService (no AI kernel deps — intent tracking)
+registerSingleton(IIntentPersistenceService, IntentPersistenceService, InstantiationType.Delayed);
+
+// Phase 16.56: EmotionalFrictionService (no AI kernel deps — friction inference)
+registerSingleton(IEmotionalFrictionService, EmotionalFrictionService, InstantiationType.Delayed);
+
+// Phase 16.57: WorkspaceMemoryService (no AI kernel deps — workspace memory)
+registerSingleton(IWorkspaceMemoryService, WorkspaceMemoryService, InstantiationType.Delayed);
+
+// Phase 16.58: HumanWorkflowValidationService (no AI kernel deps — workflow validation)
+registerSingleton(IHumanWorkflowValidationService, HumanWorkflowValidationService, InstantiationType.Delayed);
+
+// Phase 16.59: SignatureHumanExperienceModelService (no AI kernel deps — human experience)
+registerSingleton(ISignatureHumanExperienceModelService, SignatureHumanExperienceModelService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
