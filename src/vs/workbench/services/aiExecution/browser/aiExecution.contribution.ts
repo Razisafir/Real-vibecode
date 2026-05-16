@@ -1,9 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 20 Productization, Deployment & Operational Readiness
- *  Real Vibecode — AI-Native IDE
+ *  AI Execution Kernel -- Phase 20 Productization, Deployment & Operational Readiness
+ *  Real Vibecode -- AI-Native IDE
  *
- *  aiExecution.contribution.ts — Service registration + integration hooks.
- *  Phase 20: Adds Production Operations services (10 new singletons).
+ *  aiExecution.contribution.ts -- Service registration + integration hooks.
+ *  Phase 21: Adds Runtime Execution services (10 new singletons #100-109).
  *
  *  Full Registration Order:
  *    1. IExecutionGraphService (no AI kernel deps)
@@ -24,16 +24,16 @@
  *    16. IBrainDashboardService (deps: Brain, Agent, Process, Graph, Observability, Context, State)
  *    17. ISystemStabilizationService (deps: Brain, Agent, Process, Graph, Context, Observability, State)
  *    18. IExecutionReplayService (deps: Brain, Agent, Process, Graph, Context, Observability, State, Stabilization, Execution)
- *    19. IDesignSystemService (no AI kernel deps — pure design governance)
- *    20. IAIPresenceService (no AI kernel deps — presence governance)
- *    21. IEditorExperienceService (no AI kernel deps — editor-first experience)
- *    22. ICognitiveLoadService (no AI kernel deps — cognitive load tracking)
- *    23. IPremiumMicrointeractionService (no AI kernel deps — motion system)
- *    24. IAITransparencyService (no AI kernel deps — AI explanation layer)
- *    25. IPanelHierarchyService (no AI kernel deps — visual hierarchy)
- *    26. IAttentionOrchestratorService (no AI kernel deps — attention management)
- *    27. IPerceivedPerformanceService (no AI kernel deps — perceived performance)
- *    28. ISignatureIdentityService (no AI kernel deps — product identity)
+ *    19. IDesignSystemService (no AI kernel deps -- pure design governance)
+ *    20. IAIPresenceService (no AI kernel deps -- presence governance)
+ *    21. IEditorExperienceService (no AI kernel deps -- editor-first experience)
+ *    22. ICognitiveLoadService (no AI kernel deps -- cognitive load tracking)
+ *    23. IPremiumMicrointeractionService (no AI kernel deps -- motion system)
+ *    24. IAITransparencyService (no AI kernel deps -- AI explanation layer)
+ *    25. IPanelHierarchyService (no AI kernel deps -- visual hierarchy)
+ *    26. IAttentionOrchestratorService (no AI kernel deps -- attention management)
+ *    27. IPerceivedPerformanceService (no AI kernel deps -- perceived performance)
+ *    28. ISignatureIdentityService (no AI kernel deps -- product identity)
  *    29. IUXConsistencyService (deps: CognitiveLoad, AIPresence, PanelHierarchy)
  *    30. IProgressiveDisclosureService (no AI kernel deps)
  *    31. IUserExperienceProfileService (no AI kernel deps)
@@ -45,46 +45,46 @@
  *    37. IOnboardingExperienceService (no AI kernel deps)
  *    38. IExpertModeService (no AI kernel deps)
  *    39. IAdaptiveExperienceValidationService (deps: Disclosure, Profile, Fatigue, Flow, Trust, Expert, Minimalism)
- *    40. IWorkbenchShellService (no AI kernel deps — premium window framing)
- *    41. ISurfaceMaterialService (no AI kernel deps — layered materials)
- *    42. IEditorDominanceService (no AI kernel deps — editor visual hero)
- *    43. IAISurfaceExperienceService (no AI kernel deps — AI integrated surfaces)
- *    44. IExecutionTimelineExperienceService (no AI kernel deps — cinematic timeline)
- *    45. ICinematicMotionService (no AI kernel deps — choreographed motion)
- *    46. IExperienceStateSurfaceService (no AI kernel deps — premium state surfaces)
- *    47. IVisualPolishService (no AI kernel deps — typography & iconography)
- *    48. IProductionUXValidationService (no AI kernel deps — production quality)
- *    49. ISignatureProductFeelService (no AI kernel deps — emotional identity)
- *    50. IWorkflowMomentumService (no AI kernel deps — momentum tracking)
- *    51. IInterruptionIntelligenceService (no AI kernel deps — interruption management)
- *    52. ISessionContinuityService (no AI kernel deps — session persistence)
- *    53. ICognitiveRecoveryService (no AI kernel deps — fatigue recovery)
- *    54. IWorkRhythmService (no AI kernel deps — rhythm learning)
- *    55. IIntentPersistenceService (no AI kernel deps — intent tracking)
- *    56. IEmotionalFrictionService (no AI kernel deps — friction inference)
- *    57. IWorkspaceMemoryService (no AI kernel deps — workspace memory)
- *    58. IHumanWorkflowValidationService (no AI kernel deps — workflow validation)
- *    59. ISignatureHumanExperienceModelService (no AI kernel deps — human experience)
- *    60. ISystemCoherenceEngineService (no AI kernel deps — system coherence)
- *    61. ICrossLayerSignalBusService (no AI kernel deps — signal routing)
- *    62. ISystemIntentAlignmentService (no AI kernel deps — intent alignment)
- *    63. ILayerSynchronizationService (no AI kernel deps — layer sync)
- *    64. IGlobalEventNormalizationService (no AI kernel deps — event normalization)
- *    65. ISystemFeedbackLoopService (no AI kernel deps — feedback loop)
- *    66. ISystemContextMergerService (no AI kernel deps — context merging)
- *    67. ISystemConflictResolverService (no AI kernel deps — conflict resolution)
- *    68. IGlobalSystemHealthOrchestratorService (no AI kernel deps — health orchestration)
- *    69. ISystemConsciousnessModelService (no AI kernel deps — consciousness model)
- *    70. ISystemStressSimulationService (no AI kernel deps — stress simulation)
- *    71. ISystemDegradationModelService (no AI kernel deps — degradation model)
- *    72. ICrossLayerFailureInjectionService (no AI kernel deps — failure injection)
- *    73. ISystemSelfHealingValidationService (no AI kernel deps — self-healing validation)
- *    74. IRealWorldWorkflowSimulationService (no AI kernel deps — workflow simulation)
- *    75. ISystemStabilityScoringService (no AI kernel deps — stability scoring)
- *    76. IEventStormSimulationService (no AI kernel deps — event storm simulation)
- *    77. IMemoryConsistencyAuditService (no AI kernel deps — memory audit)
- *    78. ISystemBoundaryDiscoveryService (no AI kernel deps — boundary discovery)
- *    79. ISystemConsolidationService (no AI kernel deps — consolidation)
+ *    40. IWorkbenchShellService (no AI kernel deps -- premium window framing)
+ *    41. ISurfaceMaterialService (no AI kernel deps -- layered materials)
+ *    42. IEditorDominanceService (no AI kernel deps -- editor visual hero)
+ *    43. IAISurfaceExperienceService (no AI kernel deps -- AI integrated surfaces)
+ *    44. IExecutionTimelineExperienceService (no AI kernel deps -- cinematic timeline)
+ *    45. ICinematicMotionService (no AI kernel deps -- choreographed motion)
+ *    46. IExperienceStateSurfaceService (no AI kernel deps -- premium state surfaces)
+ *    47. IVisualPolishService (no AI kernel deps -- typography & iconography)
+ *    48. IProductionUXValidationService (no AI kernel deps -- production quality)
+ *    49. ISignatureProductFeelService (no AI kernel deps -- emotional identity)
+ *    50. IWorkflowMomentumService (no AI kernel deps -- momentum tracking)
+ *    51. IInterruptionIntelligenceService (no AI kernel deps -- interruption management)
+ *    52. ISessionContinuityService (no AI kernel deps -- session persistence)
+ *    53. ICognitiveRecoveryService (no AI kernel deps -- fatigue recovery)
+ *    54. IWorkRhythmService (no AI kernel deps -- rhythm learning)
+ *    55. IIntentPersistenceService (no AI kernel deps -- intent tracking)
+ *    56. IEmotionalFrictionService (no AI kernel deps -- friction inference)
+ *    57. IWorkspaceMemoryService (no AI kernel deps -- workspace memory)
+ *    58. IHumanWorkflowValidationService (no AI kernel deps -- workflow validation)
+ *    59. ISignatureHumanExperienceModelService (no AI kernel deps -- human experience)
+ *    60. ISystemCoherenceEngineService (no AI kernel deps -- system coherence)
+ *    61. ICrossLayerSignalBusService (no AI kernel deps -- signal routing)
+ *    62. ISystemIntentAlignmentService (no AI kernel deps -- intent alignment)
+ *    63. ILayerSynchronizationService (no AI kernel deps -- layer sync)
+ *    64. IGlobalEventNormalizationService (no AI kernel deps -- event normalization)
+ *    65. ISystemFeedbackLoopService (no AI kernel deps -- feedback loop)
+ *    66. ISystemContextMergerService (no AI kernel deps -- context merging)
+ *    67. ISystemConflictResolverService (no AI kernel deps -- conflict resolution)
+ *    68. IGlobalSystemHealthOrchestratorService (no AI kernel deps -- health orchestration)
+ *    69. ISystemConsciousnessModelService (no AI kernel deps -- consciousness model)
+ *    70. ISystemStressSimulationService (no AI kernel deps -- stress simulation)
+ *    71. ISystemDegradationModelService (no AI kernel deps -- degradation model)
+ *    72. ICrossLayerFailureInjectionService (no AI kernel deps -- failure injection)
+ *    73. ISystemSelfHealingValidationService (no AI kernel deps -- self-healing validation)
+ *    74. IRealWorldWorkflowSimulationService (no AI kernel deps -- workflow simulation)
+ *    75. ISystemStabilityScoringService (no AI kernel deps -- stability scoring)
+ *    76. IEventStormSimulationService (no AI kernel deps -- event storm simulation)
+ *    77. IMemoryConsistencyAuditService (no AI kernel deps -- memory audit)
+ *    78. ISystemBoundaryDiscoveryService (no AI kernel deps -- boundary discovery)
+ *    79. ISystemConsolidationService (no AI kernel deps -- consolidation)
  *    80. IServiceConsolidationEngineService (no AI kernel deps -- service consolidation)
  *    81. IDependencyGraphSimplificationService (no AI kernel deps -- dependency simplification)
  *    82. IServiceBoundaryClarificationService (no AI kernel deps -- boundary clarification)
@@ -105,6 +105,16 @@
  *    97. IDistributionPackagingService (no AI kernel deps -- distribution packaging)
  *    98. IOperationalAnalyticsService (no AI kernel deps -- operational analytics)
  *    99. IProductionReadinessValidatorService (no AI kernel deps -- production readiness)
+ *   100. IRuntimeKernelService (no AI kernel deps -- runtime kernel heartbeat)
+ *   101. IExecutionSchedulerService (no AI kernel deps -- execution scheduler)
+ *   102. IAgentOrchestrationRuntimeService (no AI kernel deps -- agent orchestration runtime)
+ *   103. IRuntimePersistenceService (no AI kernel deps -- runtime persistence)
+ *   104. IRuntimeHealthSupervisorService (no AI kernel deps -- runtime health supervisor)
+ *   105. IRuntimeRecoveryOrchestratorService (no AI kernel deps -- runtime recovery orchestrator)
+ *   106. IResourceGovernanceService (no AI kernel deps -- resource governance)
+ *   107. IDistributedExecutionBridgeService (no AI kernel deps -- distributed execution bridge)
+ *   108. IRuntimeGovernanceService (no AI kernel deps -- runtime governance)
+ *   109. IAutonomousEvolutionRuntimeService (no AI kernel deps -- autonomous evolution runtime)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -203,6 +213,10 @@ import { ServiceConsolidationEngineService, DependencyGraphSimplificationService
 import { IProductionDeploymentService, ISecurityBoundaryService, IUpdateLifecycleService, ITelemetryGovernanceService, IRuntimeMonitoringService, IRecoveryFailsafeService, IProductionConfigurationService, IDistributionPackagingService, IOperationalAnalyticsService, IProductionReadinessValidatorService } from '../common/productionOperations.js';
 import { ProductionDeploymentService, SecurityBoundaryService, UpdateLifecycleService, TelemetryGovernanceService, RuntimeMonitoringService, RecoveryFailsafeService, ProductionConfigurationService, DistributionPackagingService, OperationalAnalyticsService, ProductionReadinessValidatorService } from './productionOperationsService.js';
 
+// Phase 21 imports
+import { IRuntimeKernelService, IExecutionSchedulerService, IAgentOrchestrationRuntimeService, IRuntimePersistenceService, IRuntimeHealthSupervisorService, IRuntimeRecoveryOrchestratorService, IResourceGovernanceService, IDistributedExecutionBridgeService, IRuntimeGovernanceService, IAutonomousEvolutionRuntimeService } from '../common/runtimeExecution.js';
+import { RuntimeKernelService, ExecutionSchedulerService, AgentOrchestrationRuntimeService, RuntimePersistenceService, RuntimeHealthSupervisorService, RuntimeRecoveryOrchestratorService, ResourceGovernanceService, DistributedExecutionBridgeService, RuntimeGovernanceService, AutonomousEvolutionRuntimeService } from './runtimeExecutionService.js';
+
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
 // ORDER MATTERS: Services are registered in dependency order.
@@ -263,34 +277,34 @@ registerSingleton(ISystemStabilizationService, SystemStabilizationService, Insta
 // Phase 11.18: ReplayEngineService (deps: Brain, Agent, Process, Graph, Context, Observability, State, Stabilization, Execution)
 registerSingleton(IExecutionReplayService, ReplayEngineService, InstantiationType.Delayed);
 
-// Phase 12.19: DesignSystemService (no AI kernel deps — pure design governance)
+// Phase 12.19: DesignSystemService (no AI kernel deps -- pure design governance)
 registerSingleton(IDesignSystemService, DesignSystemService, InstantiationType.Delayed);
 
-// Phase 13.20: AIPresenceService (no AI kernel deps — presence governance)
+// Phase 13.20: AIPresenceService (no AI kernel deps -- presence governance)
 registerSingleton(IAIPresenceService, AIPresenceService, InstantiationType.Delayed);
 
-// Phase 13.21: EditorExperienceService (no AI kernel deps — editor-first experience)
+// Phase 13.21: EditorExperienceService (no AI kernel deps -- editor-first experience)
 registerSingleton(IEditorExperienceService, EditorExperienceService, InstantiationType.Delayed);
 
-// Phase 13.22: CognitiveLoadService (no AI kernel deps — cognitive load tracking)
+// Phase 13.22: CognitiveLoadService (no AI kernel deps -- cognitive load tracking)
 registerSingleton(ICognitiveLoadService, CognitiveLoadService, InstantiationType.Delayed);
 
-// Phase 13.23: PremiumMicrointeractionService (no AI kernel deps — motion system)
+// Phase 13.23: PremiumMicrointeractionService (no AI kernel deps -- motion system)
 registerSingleton(IPremiumMicrointeractionService, PremiumMicrointeractionService, InstantiationType.Delayed);
 
-// Phase 13.24: AITransparencyService (no AI kernel deps — AI explanation layer)
+// Phase 13.24: AITransparencyService (no AI kernel deps -- AI explanation layer)
 registerSingleton(IAITransparencyService, AITransparencyService, InstantiationType.Delayed);
 
-// Phase 13.25: PanelHierarchyService (no AI kernel deps — visual hierarchy)
+// Phase 13.25: PanelHierarchyService (no AI kernel deps -- visual hierarchy)
 registerSingleton(IPanelHierarchyService, PanelHierarchyService, InstantiationType.Delayed);
 
-// Phase 13.26: AttentionOrchestratorService (no AI kernel deps — attention management)
+// Phase 13.26: AttentionOrchestratorService (no AI kernel deps -- attention management)
 registerSingleton(IAttentionOrchestratorService, AttentionOrchestratorService, InstantiationType.Delayed);
 
-// Phase 13.27: PerceivedPerformanceService (no AI kernel deps — perceived performance)
+// Phase 13.27: PerceivedPerformanceService (no AI kernel deps -- perceived performance)
 registerSingleton(IPerceivedPerformanceService, PerceivedPerformanceService, InstantiationType.Delayed);
 
-// Phase 13.28: SignatureIdentityService (no AI kernel deps — product identity)
+// Phase 13.28: SignatureIdentityService (no AI kernel deps -- product identity)
 registerSingleton(ISignatureIdentityService, SignatureIdentityService, InstantiationType.Delayed);
 
 // Phase 13.29: UXConsistencyService (deps: CognitiveLoad, AIPresence, PanelHierarchy)
@@ -326,124 +340,124 @@ registerSingleton(IExpertModeService, ExpertModeService, InstantiationType.Delay
 // Phase 14.39: AdaptiveExperienceValidationService (deps: Disclosure, Profile, Fatigue, Flow, Trust, Expert, Minimalism)
 registerSingleton(IAdaptiveExperienceValidationService, AdaptiveExperienceValidationService, InstantiationType.Delayed);
 
-// Phase 15.40: WorkbenchShellService (no AI kernel deps — premium window framing)
+// Phase 15.40: WorkbenchShellService (no AI kernel deps -- premium window framing)
 registerSingleton(IWorkbenchShellService, WorkbenchShellService, InstantiationType.Delayed);
 
-// Phase 15.41: SurfaceMaterialService (no AI kernel deps — layered materials)
+// Phase 15.41: SurfaceMaterialService (no AI kernel deps -- layered materials)
 registerSingleton(ISurfaceMaterialService, SurfaceMaterialService, InstantiationType.Delayed);
 
-// Phase 15.42: EditorDominanceService (no AI kernel deps — editor visual hero)
+// Phase 15.42: EditorDominanceService (no AI kernel deps -- editor visual hero)
 registerSingleton(IEditorDominanceService, EditorDominanceService, InstantiationType.Delayed);
 
-// Phase 15.43: AISurfaceExperienceService (no AI kernel deps — AI integrated surfaces)
+// Phase 15.43: AISurfaceExperienceService (no AI kernel deps -- AI integrated surfaces)
 registerSingleton(IAISurfaceExperienceService, AISurfaceExperienceService, InstantiationType.Delayed);
 
-// Phase 15.44: ExecutionTimelineExperienceService (no AI kernel deps — cinematic timeline)
+// Phase 15.44: ExecutionTimelineExperienceService (no AI kernel deps -- cinematic timeline)
 registerSingleton(IExecutionTimelineExperienceService, ExecutionTimelineExperienceService, InstantiationType.Delayed);
 
-// Phase 15.45: CinematicMotionService (no AI kernel deps — choreographed motion)
+// Phase 15.45: CinematicMotionService (no AI kernel deps -- choreographed motion)
 registerSingleton(ICinematicMotionService, CinematicMotionService, InstantiationType.Delayed);
 
-// Phase 15.46: ExperienceStateSurfaceService (no AI kernel deps — premium state surfaces)
+// Phase 15.46: ExperienceStateSurfaceService (no AI kernel deps -- premium state surfaces)
 registerSingleton(IExperienceStateSurfaceService, ExperienceStateSurfaceService, InstantiationType.Delayed);
 
-// Phase 15.47: VisualPolishService (no AI kernel deps — typography & iconography)
+// Phase 15.47: VisualPolishService (no AI kernel deps -- typography & iconography)
 registerSingleton(IVisualPolishService, VisualPolishService, InstantiationType.Delayed);
 
-// Phase 15.48: ProductionUXValidationService (no AI kernel deps — production quality)
+// Phase 15.48: ProductionUXValidationService (no AI kernel deps -- production quality)
 registerSingleton(IProductionUXValidationService, ProductionUXValidationService, InstantiationType.Delayed);
 
-// Phase 15.49: SignatureProductFeelService (no AI kernel deps — emotional identity)
+// Phase 15.49: SignatureProductFeelService (no AI kernel deps -- emotional identity)
 registerSingleton(ISignatureProductFeelService, SignatureProductFeelService, InstantiationType.Delayed);
 
-// Phase 16.50: WorkflowMomentumService (no AI kernel deps — momentum tracking)
+// Phase 16.50: WorkflowMomentumService (no AI kernel deps -- momentum tracking)
 registerSingleton(IWorkflowMomentumService, WorkflowMomentumService, InstantiationType.Delayed);
 
-// Phase 16.51: InterruptionIntelligenceService (no AI kernel deps — interruption management)
+// Phase 16.51: InterruptionIntelligenceService (no AI kernel deps -- interruption management)
 registerSingleton(IInterruptionIntelligenceService, InterruptionIntelligenceService, InstantiationType.Delayed);
 
-// Phase 16.52: SessionContinuityService (no AI kernel deps — session persistence)
+// Phase 16.52: SessionContinuityService (no AI kernel deps -- session persistence)
 registerSingleton(ISessionContinuityService, SessionContinuityService, InstantiationType.Delayed);
 
-// Phase 16.53: CognitiveRecoveryService (no AI kernel deps — fatigue recovery)
+// Phase 16.53: CognitiveRecoveryService (no AI kernel deps -- fatigue recovery)
 registerSingleton(ICognitiveRecoveryService, CognitiveRecoveryService, InstantiationType.Delayed);
 
-// Phase 16.54: WorkRhythmService (no AI kernel deps — rhythm learning)
+// Phase 16.54: WorkRhythmService (no AI kernel deps -- rhythm learning)
 registerSingleton(IWorkRhythmService, WorkRhythmService, InstantiationType.Delayed);
 
-// Phase 16.55: IntentPersistenceService (no AI kernel deps — intent tracking)
+// Phase 16.55: IntentPersistenceService (no AI kernel deps -- intent tracking)
 registerSingleton(IIntentPersistenceService, IntentPersistenceService, InstantiationType.Delayed);
 
-// Phase 16.56: EmotionalFrictionService (no AI kernel deps — friction inference)
+// Phase 16.56: EmotionalFrictionService (no AI kernel deps -- friction inference)
 registerSingleton(IEmotionalFrictionService, EmotionalFrictionService, InstantiationType.Delayed);
 
-// Phase 16.57: WorkspaceMemoryService (no AI kernel deps — workspace memory)
+// Phase 16.57: WorkspaceMemoryService (no AI kernel deps -- workspace memory)
 registerSingleton(IWorkspaceMemoryService, WorkspaceMemoryService, InstantiationType.Delayed);
 
-// Phase 16.58: HumanWorkflowValidationService (no AI kernel deps — workflow validation)
+// Phase 16.58: HumanWorkflowValidationService (no AI kernel deps -- workflow validation)
 registerSingleton(IHumanWorkflowValidationService, HumanWorkflowValidationService, InstantiationType.Delayed);
 
-// Phase 16.59: SignatureHumanExperienceModelService (no AI kernel deps — human experience)
+// Phase 16.59: SignatureHumanExperienceModelService (no AI kernel deps -- human experience)
 registerSingleton(ISignatureHumanExperienceModelService, SignatureHumanExperienceModelService, InstantiationType.Delayed);
 
-// Phase 17.60: SystemCoherenceEngineService (no AI kernel deps — system coherence)
+// Phase 17.60: SystemCoherenceEngineService (no AI kernel deps -- system coherence)
 registerSingleton(ISystemCoherenceEngineService, SystemCoherenceEngineService, InstantiationType.Delayed);
 
-// Phase 17.61: CrossLayerSignalBusService (no AI kernel deps — signal routing)
+// Phase 17.61: CrossLayerSignalBusService (no AI kernel deps -- signal routing)
 registerSingleton(ICrossLayerSignalBusService, CrossLayerSignalBusService, InstantiationType.Delayed);
 
-// Phase 17.62: SystemIntentAlignmentService (no AI kernel deps — intent alignment)
+// Phase 17.62: SystemIntentAlignmentService (no AI kernel deps -- intent alignment)
 registerSingleton(ISystemIntentAlignmentService, SystemIntentAlignmentService, InstantiationType.Delayed);
 
-// Phase 17.63: LayerSynchronizationService (no AI kernel deps — layer sync)
+// Phase 17.63: LayerSynchronizationService (no AI kernel deps -- layer sync)
 registerSingleton(ILayerSynchronizationService, LayerSynchronizationService, InstantiationType.Delayed);
 
-// Phase 17.64: GlobalEventNormalizationService (no AI kernel deps — event normalization)
+// Phase 17.64: GlobalEventNormalizationService (no AI kernel deps -- event normalization)
 registerSingleton(IGlobalEventNormalizationService, GlobalEventNormalizationService, InstantiationType.Delayed);
 
-// Phase 17.65: SystemFeedbackLoopService (no AI kernel deps — feedback loop)
+// Phase 17.65: SystemFeedbackLoopService (no AI kernel deps -- feedback loop)
 registerSingleton(ISystemFeedbackLoopService, SystemFeedbackLoopService, InstantiationType.Delayed);
 
-// Phase 17.66: SystemContextMergerService (no AI kernel deps — context merging)
+// Phase 17.66: SystemContextMergerService (no AI kernel deps -- context merging)
 registerSingleton(ISystemContextMergerService, SystemContextMergerService, InstantiationType.Delayed);
 
-// Phase 17.67: SystemConflictResolverService (no AI kernel deps — conflict resolution)
+// Phase 17.67: SystemConflictResolverService (no AI kernel deps -- conflict resolution)
 registerSingleton(ISystemConflictResolverService, SystemConflictResolverService, InstantiationType.Delayed);
 
-// Phase 17.68: GlobalSystemHealthOrchestratorService (no AI kernel deps — health orchestration)
+// Phase 17.68: GlobalSystemHealthOrchestratorService (no AI kernel deps -- health orchestration)
 registerSingleton(IGlobalSystemHealthOrchestratorService, GlobalSystemHealthOrchestratorService, InstantiationType.Delayed);
 
-// Phase 17.69: SystemConsciousnessModelService (no AI kernel deps — consciousness model)
+// Phase 17.69: SystemConsciousnessModelService (no AI kernel deps -- consciousness model)
 registerSingleton(ISystemConsciousnessModelService, SystemConsciousnessModelService, InstantiationType.Delayed);
 
-// Phase 18.70: SystemStressSimulationService (no AI kernel deps — stress simulation)
+// Phase 18.70: SystemStressSimulationService (no AI kernel deps -- stress simulation)
 registerSingleton(ISystemStressSimulationService, SystemStressSimulationService, InstantiationType.Delayed);
 
-// Phase 18.71: SystemDegradationModelService (no AI kernel deps — degradation model)
+// Phase 18.71: SystemDegradationModelService (no AI kernel deps -- degradation model)
 registerSingleton(ISystemDegradationModelService, SystemDegradationModelService, InstantiationType.Delayed);
 
-// Phase 18.72: CrossLayerFailureInjectionService (no AI kernel deps — failure injection)
+// Phase 18.72: CrossLayerFailureInjectionService (no AI kernel deps -- failure injection)
 registerSingleton(ICrossLayerFailureInjectionService, CrossLayerFailureInjectionService, InstantiationType.Delayed);
 
-// Phase 18.73: SystemSelfHealingValidationService (no AI kernel deps — self-healing validation)
+// Phase 18.73: SystemSelfHealingValidationService (no AI kernel deps -- self-healing validation)
 registerSingleton(ISystemSelfHealingValidationService, SystemSelfHealingValidationService, InstantiationType.Delayed);
 
-// Phase 18.74: RealWorldWorkflowSimulationService (no AI kernel deps — workflow simulation)
+// Phase 18.74: RealWorldWorkflowSimulationService (no AI kernel deps -- workflow simulation)
 registerSingleton(IRealWorldWorkflowSimulationService, RealWorldWorkflowSimulationService, InstantiationType.Delayed);
 
-// Phase 18.75: SystemStabilityScoringService (no AI kernel deps — stability scoring)
+// Phase 18.75: SystemStabilityScoringService (no AI kernel deps -- stability scoring)
 registerSingleton(ISystemStabilityScoringService, SystemStabilityScoringService, InstantiationType.Delayed);
 
-// Phase 18.76: EventStormSimulationService (no AI kernel deps — event storm simulation)
+// Phase 18.76: EventStormSimulationService (no AI kernel deps -- event storm simulation)
 registerSingleton(IEventStormSimulationService, EventStormSimulationService, InstantiationType.Delayed);
 
-// Phase 18.77: MemoryConsistencyAuditService (no AI kernel deps — memory audit)
+// Phase 18.77: MemoryConsistencyAuditService (no AI kernel deps -- memory audit)
 registerSingleton(IMemoryConsistencyAuditService, MemoryConsistencyAuditService, InstantiationType.Delayed);
 
-// Phase 18.78: SystemBoundaryDiscoveryService (no AI kernel deps — boundary discovery)
+// Phase 18.78: SystemBoundaryDiscoveryService (no AI kernel deps -- boundary discovery)
 registerSingleton(ISystemBoundaryDiscoveryService, SystemBoundaryDiscoveryService, InstantiationType.Delayed);
 
-// Phase 18.79: SystemConsolidationService (no AI kernel deps — consolidation)
+// Phase 18.79: SystemConsolidationService (no AI kernel deps -- consolidation)
 registerSingleton(ISystemConsolidationService, SystemConsolidationService, InstantiationType.Delayed);
 
 // Phase 19.80: ServiceConsolidationEngineService (no AI kernel deps -- service consolidation)
@@ -505,6 +519,36 @@ registerSingleton(IOperationalAnalyticsService, OperationalAnalyticsService, Ins
 
 // Phase 20.99: ProductionReadinessValidatorService (no AI kernel deps -- production readiness)
 registerSingleton(IProductionReadinessValidatorService, ProductionReadinessValidatorService, InstantiationType.Delayed);
+
+// Phase 21.100: RuntimeKernelService (no AI kernel deps -- runtime kernel heartbeat)
+registerSingleton(IRuntimeKernelService, RuntimeKernelService, InstantiationType.Delayed);
+
+// Phase 21.101: ExecutionSchedulerService (no AI kernel deps -- execution scheduler)
+registerSingleton(IExecutionSchedulerService, ExecutionSchedulerService, InstantiationType.Delayed);
+
+// Phase 21.102: AgentOrchestrationRuntimeService (no AI kernel deps -- agent orchestration runtime)
+registerSingleton(IAgentOrchestrationRuntimeService, AgentOrchestrationRuntimeService, InstantiationType.Delayed);
+
+// Phase 21.103: RuntimePersistenceService (no AI kernel deps -- runtime persistence)
+registerSingleton(IRuntimePersistenceService, RuntimePersistenceService, InstantiationType.Delayed);
+
+// Phase 21.104: RuntimeHealthSupervisorService (no AI kernel deps -- runtime health supervisor)
+registerSingleton(IRuntimeHealthSupervisorService, RuntimeHealthSupervisorService, InstantiationType.Delayed);
+
+// Phase 21.105: RuntimeRecoveryOrchestratorService (no AI kernel deps -- runtime recovery orchestrator)
+registerSingleton(IRuntimeRecoveryOrchestratorService, RuntimeRecoveryOrchestratorService, InstantiationType.Delayed);
+
+// Phase 21.106: ResourceGovernanceService (no AI kernel deps -- resource governance)
+registerSingleton(IResourceGovernanceService, ResourceGovernanceService, InstantiationType.Delayed);
+
+// Phase 21.107: DistributedExecutionBridgeService (no AI kernel deps -- distributed execution bridge)
+registerSingleton(IDistributedExecutionBridgeService, DistributedExecutionBridgeService, InstantiationType.Delayed);
+
+// Phase 21.108: RuntimeGovernanceService (no AI kernel deps -- runtime governance)
+registerSingleton(IRuntimeGovernanceService, RuntimeGovernanceService, InstantiationType.Delayed);
+
+// Phase 21.109: AutonomousEvolutionRuntimeService (no AI kernel deps -- autonomous evolution runtime)
+registerSingleton(IAutonomousEvolutionRuntimeService, AutonomousEvolutionRuntimeService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
