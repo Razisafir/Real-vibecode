@@ -87,6 +87,10 @@ import { SystemStabilizationService } from './systemStabilizationService.js';
 import { IExecutionReplayService } from '../common/replayEngine.js';
 import { ReplayEngineService } from './replayEngineService.js';
 
+// Phase 12 imports
+import { IDesignSystemService } from '../common/designSystem.js';
+import { DesignSystemService } from './designSystemService.js';
+
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
 // ORDER MATTERS: Services are registered in dependency order.
@@ -146,6 +150,9 @@ registerSingleton(ISystemStabilizationService, SystemStabilizationService, Insta
 
 // Phase 11.18: ReplayEngineService (deps: Brain, Agent, Process, Graph, Context, Observability, State, Stabilization, Execution)
 registerSingleton(IExecutionReplayService, ReplayEngineService, InstantiationType.Delayed);
+
+// Phase 12.19: DesignSystemService (no AI kernel deps — pure design governance)
+registerSingleton(IDesignSystemService, DesignSystemService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
