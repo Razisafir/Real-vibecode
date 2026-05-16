@@ -1,9 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 19 Architectural Consolidation & Production Hardening
+ *  AI Execution Kernel — Phase 20 Productization, Deployment & Operational Readiness
  *  Real Vibecode — AI-Native IDE
  *
  *  aiExecution.contribution.ts — Service registration + integration hooks.
- *  Phase 19: Adds Architectural Consolidation services (10 new singletons).
+ *  Phase 20: Adds Production Operations services (10 new singletons).
  *
  *  Full Registration Order:
  *    1. IExecutionGraphService (no AI kernel deps)
@@ -95,6 +95,16 @@
  *    87. IComplexityMetricsService (no AI kernel deps -- complexity metrics)
  *    88. ISafeMigrationStrategyService (no AI kernel deps -- migration strategy)
  *    89. IFinalArchitectureModelService (no AI kernel deps -- final architecture model)
+ *    90. IProductionDeploymentService (no AI kernel deps -- production deployment)
+ *    91. ISecurityBoundaryService (no AI kernel deps -- security hardening)
+ *    92. IUpdateLifecycleService (no AI kernel deps -- update lifecycle)
+ *    93. ITelemetryGovernanceService (no AI kernel deps -- telemetry governance)
+ *    94. IRuntimeMonitoringService (no AI kernel deps -- runtime monitoring)
+ *    95. IRecoveryFailsafeService (no AI kernel deps -- recovery failsafe)
+ *    96. IProductionConfigurationService (no AI kernel deps -- production configuration)
+ *    97. IDistributionPackagingService (no AI kernel deps -- distribution packaging)
+ *    98. IOperationalAnalyticsService (no AI kernel deps -- operational analytics)
+ *    99. IProductionReadinessValidatorService (no AI kernel deps -- production readiness)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -188,6 +198,10 @@ import { SystemStressSimulationService, SystemDegradationModelService, CrossLaye
 // Phase 19 imports
 import { IServiceConsolidationEngineService, IDependencyGraphSimplificationService, IServiceBoundaryClarificationService, ISystemModuleGroupingService, IRedundancyEliminationService, ISimplifiedOrchestrationService, IPublicAPISimplificationService, IComplexityMetricsService, ISafeMigrationStrategyService, IFinalArchitectureModelService } from '../common/systemConsolidation.js';
 import { ServiceConsolidationEngineService, DependencyGraphSimplificationService, ServiceBoundaryClarificationService, SystemModuleGroupingService, RedundancyEliminationService, SimplifiedOrchestrationService, PublicAPISimplificationService, ComplexityMetricsService, SafeMigrationStrategyService, FinalArchitectureModelService } from './systemConsolidationService.js';
+
+// Phase 20 imports
+import { IProductionDeploymentService, ISecurityBoundaryService, IUpdateLifecycleService, ITelemetryGovernanceService, IRuntimeMonitoringService, IRecoveryFailsafeService, IProductionConfigurationService, IDistributionPackagingService, IOperationalAnalyticsService, IProductionReadinessValidatorService } from '../common/productionOperations.js';
+import { ProductionDeploymentService, SecurityBoundaryService, UpdateLifecycleService, TelemetryGovernanceService, RuntimeMonitoringService, RecoveryFailsafeService, ProductionConfigurationService, DistributionPackagingService, OperationalAnalyticsService, ProductionReadinessValidatorService } from './productionOperationsService.js';
 
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
@@ -461,6 +475,36 @@ registerSingleton(ISafeMigrationStrategyService, SafeMigrationStrategyService, I
 
 // Phase 19.89: FinalArchitectureModelService (no AI kernel deps -- final architecture model)
 registerSingleton(IFinalArchitectureModelService, FinalArchitectureModelService, InstantiationType.Delayed);
+
+// Phase 20.90: ProductionDeploymentService (no AI kernel deps -- production deployment)
+registerSingleton(IProductionDeploymentService, ProductionDeploymentService, InstantiationType.Delayed);
+
+// Phase 20.91: SecurityBoundaryService (no AI kernel deps -- security hardening)
+registerSingleton(ISecurityBoundaryService, SecurityBoundaryService, InstantiationType.Delayed);
+
+// Phase 20.92: UpdateLifecycleService (no AI kernel deps -- update lifecycle)
+registerSingleton(IUpdateLifecycleService, UpdateLifecycleService, InstantiationType.Delayed);
+
+// Phase 20.93: TelemetryGovernanceService (no AI kernel deps -- telemetry governance)
+registerSingleton(ITelemetryGovernanceService, TelemetryGovernanceService, InstantiationType.Delayed);
+
+// Phase 20.94: RuntimeMonitoringService (no AI kernel deps -- runtime monitoring)
+registerSingleton(IRuntimeMonitoringService, RuntimeMonitoringService, InstantiationType.Delayed);
+
+// Phase 20.95: RecoveryFailsafeService (no AI kernel deps -- recovery failsafe)
+registerSingleton(IRecoveryFailsafeService, RecoveryFailsafeService, InstantiationType.Delayed);
+
+// Phase 20.96: ProductionConfigurationService (no AI kernel deps -- production configuration)
+registerSingleton(IProductionConfigurationService, ProductionConfigurationService, InstantiationType.Delayed);
+
+// Phase 20.97: DistributionPackagingService (no AI kernel deps -- distribution packaging)
+registerSingleton(IDistributionPackagingService, DistributionPackagingService, InstantiationType.Delayed);
+
+// Phase 20.98: OperationalAnalyticsService (no AI kernel deps -- operational analytics)
+registerSingleton(IOperationalAnalyticsService, OperationalAnalyticsService, InstantiationType.Delayed);
+
+// Phase 20.99: ProductionReadinessValidatorService (no AI kernel deps -- production readiness)
+registerSingleton(IProductionReadinessValidatorService, ProductionReadinessValidatorService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
