@@ -97,7 +97,7 @@ import {
 // ICON REGISTRY -- 80+ icons with real SVG path data
 // =====================================================================================
 
-const ICON_REGISTRY: IIconDefinition[] = [
+export const ICON_REGISTRY: IIconDefinition[] = [
         // -- Action icons (16) --
         { id: 'play', svgPath: 'M5 3l14 9-14 9V3z', category: IconCategory.Action, defaultSize: 16, accessibilityLabel: 'Play', strokeWidth: 1.5, states: { hover: 'opacity:0.8', active: 'transform:scale(0.95)', disabled: 'opacity:0.4', focus: 'outline:2px solid #5b7fb5;outline-offset:1px' } },
         { id: 'stop', svgPath: 'M4 4h12v12H4V4z', category: IconCategory.Action, defaultSize: 16, accessibilityLabel: 'Stop', strokeWidth: 1.5, states: { hover: 'opacity:0.8', active: 'transform:scale(0.95)', disabled: 'opacity:0.4', focus: 'outline:2px solid #5b7fb5;outline-offset:1px' } },
@@ -254,27 +254,27 @@ const EMOJI_PATTERN = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27
 // DESIGN TOKEN VALUES
 // =====================================================================================
 
-const SPACING_TOKENS: ISpacingTokens = {
+export const SPACING_TOKENS: ISpacingTokens = {
         xs: 2, sm: 4, md: 8, lg: 12, xl: 16, '2xl': 20, '3xl': 24, '4xl': 32, '5xl': 40, '6xl': 48,
 };
 
-const TYPOGRAPHY_TOKENS: ITypographyTokens = {
+export const TYPOGRAPHY_TOKENS: ITypographyTokens = {
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         sizes: { xs: 11, sm: 12, md: 13, base: 14, lg: 16, xl: 20 },
         weights: { regular: 400, medium: 500, semibold: 600 },
         lineHeights: { tight: 1.2, normal: 1.5, relaxed: 1.7 },
 };
 
-const RADIUS_TOKENS: IRadiusTokens = { xs: 2, sm: 4, md: 6, lg: 8 };
+export const RADIUS_TOKENS: IRadiusTokens = { xs: 2, sm: 4, md: 6, lg: 8 };
 
-const ELEVATION_TOKENS: IElevationTokens = {
+export const ELEVATION_TOKENS: IElevationTokens = {
         0: 'none',
         1: '0 1px 2px rgba(0,0,0,0.12)',
         2: '0 2px 8px rgba(0,0,0,0.16)',
         3: '0 4px 16px rgba(0,0,0,0.24)',
 };
 
-const MOTION_TOKENS: IMotionTokens = {
+export const MOTION_TOKENS: IMotionTokens = {
         durations: { instant: 0, fast: 50, normal: 100, slow: 150, deliberate: 200, exit: 300 },
         easings: {
                 standard: 'cubic-bezier(0.4, 0, 0.2, 1)',
@@ -283,18 +283,21 @@ const MOTION_TOKENS: IMotionTokens = {
         },
 };
 
-const OPACITY_TOKENS: IOpacityTokens = {
+export const OPACITY_TOKENS: IOpacityTokens = {
         invisible: 0, hover: 0.04, selected: 0.08, pressed: 0.12, disabled: 0.16,
         border: 0.24, divider: 0.08, placeholder: 0.48, secondary: 0.72, full: 1.0,
 };
 
-const COLOR_TOKENS: IColorTokens = {
+export const COLOR_TOKENS: IColorTokens = {
         surface: { base: '#1e1e2e', raised: '#252536', overlay: '#2d2d44', sunken: '#161625' },
         onSurface: { primary: '#e4e4ef', secondary: '#a0a0b8', disabled: '#5c5c72' },
         border: { default: 'rgba(255,255,255,0.08)', hover: 'rgba(255,255,255,0.16)', focus: '#5b7fb5' },
         accent: { default: '#5b7fb5', hover: '#6b8fc5', muted: 'rgba(91,127,181,0.16)' },
         status: { success: '#4caf7d', warning: '#e5a84b', error: '#cf5c5c', info: '#5b7fb5' },
 };
+
+// Default dark color tokens -- re-exported for Phase 24 consumption
+export const DEFAULT_DARK_COLOR_TOKENS = COLOR_TOKENS;
 
 // Density multipliers
 const DENSITY_MULTIPLIERS: Record<DensityMode, number> = {

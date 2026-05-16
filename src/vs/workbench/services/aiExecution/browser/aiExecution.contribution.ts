@@ -3,7 +3,7 @@
  *  Real Vibecode -- AI-Native IDE
  *
  *  aiExecution.contribution.ts -- Service registration + integration hooks.
- *  Phase 23: Adds Professional UI services (10 new singletons #120-129).
+ *  Phase 24: Adds Rendered Product services (10 new singletons #130-139). REMOVED 10 fake UX services.
  *
  *  Full Registration Order:
  *    1. IExecutionGraphService (no AI kernel deps)
@@ -135,6 +135,16 @@
  *   127. IRenderingPerformanceService (no AI kernel deps -- rendering performance)
  *   128. IProductSurfaceRebuildService (no AI kernel deps -- product surface rebuild)
  *   129. IProductRealityReportService (no AI kernel deps -- product reality report)
+ *   130. ICSSPipelineService (no AI kernel deps -- CSS token pipeline)
+ *   131. IIconRenderingService (no AI kernel deps -- icon rendering)
+ *   132. ISurfaceRebuildRenderService (no AI kernel deps -- surface rebuild render)
+ *   133. IInteractionImplementationService (no AI kernel deps -- interaction implementation)
+ *   134. IAccessibilityRemediationService (no AI kernel deps -- accessibility remediation)
+ *   135. IPerformanceCleanupService (no AI kernel deps -- performance cleanup)
+ *   136. IUXCollapseService (no AI kernel deps -- UX collapse)
+ *   137. IComponentLibraryService (no AI kernel deps -- component library)
+ *   138. IApplicationPolishService (no AI kernel deps -- application polish)
+ *   139. IProductAuditService (no AI kernel deps -- product audit)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -244,6 +254,10 @@ import { RealityValidationService, ExecutionTruthAuditService, MaintainabilityAn
 // Phase 23 imports
 import { IIconSystemService, IDesignTokenService, IComponentStandardsService, IUIRealityValidationService, IUXReductionService, IInteractionPolishService, IAccessibilityComplianceService, IRenderingPerformanceService, IProductSurfaceRebuildService, IProductRealityReportService } from '../common/professionalUI.js';
 import { IconSystemService, DesignTokenService, ComponentStandardsService, UIRealityValidationService, UXReductionService, InteractionPolishService, AccessibilityComplianceService, RenderingPerformanceService, ProductSurfaceRebuildService, ProductRealityReportService } from './professionalUIService.js';
+
+// Phase 24 imports
+import { ICSSPipelineService, IIconRenderingService, ISurfaceRebuildRenderService, IInteractionImplementationService, IAccessibilityRemediationService, IPerformanceCleanupService, IUXCollapseService, IComponentLibraryService, IApplicationPolishService, IProductAuditService } from '../common/renderedProduct.js';
+import { CSSPipelineService, IconRenderingService, SurfaceRebuildRenderService, InteractionImplementationService, AccessibilityRemediationService, PerformanceCleanupService, UXCollapseService, ComponentLibraryService, ApplicationPolishService, ProductAuditService } from './renderedProductService.js';
 
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
@@ -637,6 +651,47 @@ registerSingleton(IProductSurfaceRebuildService, ProductSurfaceRebuildService, I
 
 // Phase 23.129: ProductRealityReportService (no AI kernel deps -- product reality report)
 registerSingleton(IProductRealityReportService, ProductRealityReportService, InstantiationType.Delayed);
+
+// Phase 24.130: CSSPipelineService (no AI kernel deps -- CSS token pipeline)
+registerSingleton(ICSSPipelineService, CSSPipelineService, InstantiationType.Delayed);
+
+// Phase 24.131: IconRenderingService (no AI kernel deps -- icon rendering)
+registerSingleton(IIconRenderingService, IconRenderingService, InstantiationType.Delayed);
+
+// Phase 24.132: SurfaceRebuildRenderService (no AI kernel deps -- surface rebuild render)
+registerSingleton(ISurfaceRebuildRenderService, SurfaceRebuildRenderService, InstantiationType.Delayed);
+
+// Phase 24.133: InteractionImplementationService (no AI kernel deps -- interaction implementation)
+registerSingleton(IInteractionImplementationService, InteractionImplementationService, InstantiationType.Delayed);
+
+// Phase 24.134: AccessibilityRemediationService (no AI kernel deps -- accessibility remediation)
+registerSingleton(IAccessibilityRemediationService, AccessibilityRemediationService, InstantiationType.Delayed);
+
+// Phase 24.135: PerformanceCleanupService (no AI kernel deps -- performance cleanup)
+registerSingleton(IPerformanceCleanupService, PerformanceCleanupService, InstantiationType.Delayed);
+
+// Phase 24.136: UXCollapseService (no AI kernel deps -- UX collapse)
+registerSingleton(IUXCollapseService, UXCollapseService, InstantiationType.Delayed);
+
+// Phase 24.137: ComponentLibraryService (no AI kernel deps -- component library)
+registerSingleton(IComponentLibraryService, ComponentLibraryService, InstantiationType.Delayed);
+
+// Phase 24.138: ApplicationPolishService (no AI kernel deps -- application polish)
+registerSingleton(IApplicationPolishService, ApplicationPolishService, InstantiationType.Delayed);
+
+// Phase 24.139: ProductAuditService (no AI kernel deps -- product audit)
+registerSingleton(IProductAuditService, ProductAuditService, InstantiationType.Delayed);
+
+
+// ─── Phase 24: REMOVED Fake UX Services ──────────────────────────────────────
+// The following 10 registrations were REMOVED in Phase 24 (zero render participation):
+//   ISignatureIdentityService (#28), IAutonomyTrustService (#36),
+//   IExpertModeService (#38), ICinematicMotionService (#45),
+//   IExperienceStateSurfaceService (#46), ISignatureProductFeelService (#49),
+//   IEmotionalFrictionService (#56), IWorkRhythmService (#54),
+//   IIntentPersistenceService (#55), ISystemConsciousnessModelService (#69)
+// These services still exist as code files but are no longer registered as singletons.
+// ────────────────────────────────────────────────────────────────────────────
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
