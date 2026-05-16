@@ -1,9 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 14 Adaptive Workflow Layer
+ *  AI Execution Kernel — Phase 15 Production Surface Rebuild
  *  Real Vibecode — AI-Native IDE
  *
  *  aiExecution.contribution.ts — Service registration + integration hooks.
- *  Phase 14: Adds Adaptive Workflow services (10 new singletons).
+ *  Phase 15: Adds Production Surface services (10 new singletons).
  *
  *  Full Registration Order:
  *    1. IObservabilityService (no AI kernel deps)
@@ -45,6 +45,16 @@
  *    37. IOnboardingExperienceService (no AI kernel deps)
  *    38. IExpertModeService (no AI kernel deps)
  *    39. IAdaptiveExperienceValidationService (deps: Disclosure, Profile, Fatigue, Flow, Trust, Expert, Minimalism)
+ *    40. IWorkbenchShellService (no AI kernel deps — premium window framing)
+ *    41. ISurfaceMaterialService (no AI kernel deps — layered materials)
+ *    42. IEditorDominanceService (no AI kernel deps — editor visual hero)
+ *    43. IAISurfaceExperienceService (no AI kernel deps — AI integrated surfaces)
+ *    44. IExecutionTimelineExperienceService (no AI kernel deps — cinematic timeline)
+ *    45. ICinematicMotionService (no AI kernel deps — choreographed motion)
+ *    46. IExperienceStateSurfaceService (no AI kernel deps — premium state surfaces)
+ *    47. IVisualPolishService (no AI kernel deps — typography & iconography)
+ *    48. IProductionUXValidationService (no AI kernel deps — production quality)
+ *    49. ISignatureProductFeelService (no AI kernel deps — emotional identity)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -118,6 +128,10 @@ import { AIPresenceService, EditorExperienceService, CognitiveLoadService, Premi
 // Phase 14 imports
 import { IProgressiveDisclosureService, IUserExperienceProfileService, IAdaptiveInterfaceService, IFeatureFatigueService, IContextualMinimalismService, IFlowStateService, IAutonomyTrustService, IOnboardingExperienceService, IExpertModeService, IAdaptiveExperienceValidationService } from '../common/adaptiveWorkflow.js';
 import { ProgressiveDisclosureService, UserExperienceProfileService, AdaptiveInterfaceService, FeatureFatigueService, ContextualMinimalismService, FlowStateService, AutonomyTrustService, OnboardingExperienceService, ExpertModeService, AdaptiveExperienceValidationService } from './adaptiveWorkflowService.js';
+
+// Phase 15 imports
+import { IWorkbenchShellService, ISurfaceMaterialService, IEditorDominanceService, IAISurfaceExperienceService, IExecutionTimelineExperienceService, ICinematicMotionService, IExperienceStateSurfaceService, IVisualPolishService, IProductionUXValidationService, ISignatureProductFeelService } from '../common/productionSurface.js';
+import { WorkbenchShellService, SurfaceMaterialService, EditorDominanceService, AISurfaceExperienceService, ExecutionTimelineExperienceService, CinematicMotionService, ExperienceStateSurfaceService, VisualPolishService, ProductionUXValidationService, SignatureProductFeelService } from './productionSurfaceService.js';
 
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
@@ -241,6 +255,36 @@ registerSingleton(IExpertModeService, ExpertModeService, InstantiationType.Delay
 
 // Phase 14.39: AdaptiveExperienceValidationService (deps: Disclosure, Profile, Fatigue, Flow, Trust, Expert, Minimalism)
 registerSingleton(IAdaptiveExperienceValidationService, AdaptiveExperienceValidationService, InstantiationType.Delayed);
+
+// Phase 15.40: WorkbenchShellService (no AI kernel deps — premium window framing)
+registerSingleton(IWorkbenchShellService, WorkbenchShellService, InstantiationType.Delayed);
+
+// Phase 15.41: SurfaceMaterialService (no AI kernel deps — layered materials)
+registerSingleton(ISurfaceMaterialService, SurfaceMaterialService, InstantiationType.Delayed);
+
+// Phase 15.42: EditorDominanceService (no AI kernel deps — editor visual hero)
+registerSingleton(IEditorDominanceService, EditorDominanceService, InstantiationType.Delayed);
+
+// Phase 15.43: AISurfaceExperienceService (no AI kernel deps — AI integrated surfaces)
+registerSingleton(IAISurfaceExperienceService, AISurfaceExperienceService, InstantiationType.Delayed);
+
+// Phase 15.44: ExecutionTimelineExperienceService (no AI kernel deps — cinematic timeline)
+registerSingleton(IExecutionTimelineExperienceService, ExecutionTimelineExperienceService, InstantiationType.Delayed);
+
+// Phase 15.45: CinematicMotionService (no AI kernel deps — choreographed motion)
+registerSingleton(ICinematicMotionService, CinematicMotionService, InstantiationType.Delayed);
+
+// Phase 15.46: ExperienceStateSurfaceService (no AI kernel deps — premium state surfaces)
+registerSingleton(IExperienceStateSurfaceService, ExperienceStateSurfaceService, InstantiationType.Delayed);
+
+// Phase 15.47: VisualPolishService (no AI kernel deps — typography & iconography)
+registerSingleton(IVisualPolishService, VisualPolishService, InstantiationType.Delayed);
+
+// Phase 15.48: ProductionUXValidationService (no AI kernel deps — production quality)
+registerSingleton(IProductionUXValidationService, ProductionUXValidationService, InstantiationType.Delayed);
+
+// Phase 15.49: SignatureProductFeelService (no AI kernel deps — emotional identity)
+registerSingleton(ISignatureProductFeelService, SignatureProductFeelService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
