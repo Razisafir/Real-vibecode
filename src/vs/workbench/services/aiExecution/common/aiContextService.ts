@@ -39,13 +39,13 @@ export const IAIContextService = createDecorator<IAIContextService>('aiContextSe
  * Each domain has its own freshness model and invalidation strategy.
  */
 export const enum ContextDomain {
-	Workspace = 'workspace',
-	File = 'file',
-	Symbol = 'symbol',
-	Dependency = 'dependency',
-	Execution = 'execution',
-	Mutation = 'mutation',
-	Temporal = 'temporal',
+        Workspace = 'workspace',
+        File = 'file',
+        Symbol = 'symbol',
+        Dependency = 'dependency',
+        Execution = 'execution',
+        Mutation = 'mutation',
+        Temporal = 'temporal',
 }
 
 // ─── Freshness Model ───────────────────────────────────────────────────────────
@@ -55,32 +55,32 @@ export const enum ContextDomain {
  * Used to prioritize which context to serve and which to invalidate.
  */
 export const enum ContextFreshness {
-	/** Context was updated within the last second — perfectly current */
-	Live = 'live',
-	/** Context was updated within the last minute — current enough for most uses */
-	Recent = 'recent',
-	/** Context was updated within the last hour — may be slightly stale */
-	Stale = 'stale',
-	/** Context was updated more than an hour ago — needs refresh */
-	Outdated = 'outdated',
+        /** Context was updated within the last second — perfectly current */
+        Live = 'live',
+        /** Context was updated within the last minute — current enough for most uses */
+        Recent = 'recent',
+        /** Context was updated within the last hour — may be slightly stale */
+        Stale = 'stale',
+        /** Context was updated more than an hour ago — needs refresh */
+        Outdated = 'outdated',
 }
 
 /**
  * Determines how a context entry should be invalidated.
  */
 export const enum InvalidationStrategy {
-	/** Context is always valid until explicitly replaced */
-	Never = 'never',
-	/** Context is valid until the source file changes */
-	OnFileChange = 'on-file-change',
-	/** Context is valid until the source file is saved */
-	OnSave = 'on-save',
-	/** Context is valid for a fixed time duration */
-	TimeBased = 'time-based',
-	/** Context is valid until the dependency graph changes */
-	OnDependencyChange = 'on-dependency-change',
-	/** Context is valid until the execution graph gets new nodes for this file */
-	OnExecutionEvent = 'on-execution-event',
+        /** Context is always valid until explicitly replaced */
+        Never = 'never',
+        /** Context is valid until the source file changes */
+        OnFileChange = 'on-file-change',
+        /** Context is valid until the source file is saved */
+        OnSave = 'on-save',
+        /** Context is valid for a fixed time duration */
+        TimeBased = 'time-based',
+        /** Context is valid until the dependency graph changes */
+        OnDependencyChange = 'on-dependency-change',
+        /** Context is valid until the execution graph gets new nodes for this file */
+        OnExecutionEvent = 'on-execution-event',
 }
 
 // ─── Workspace Context ─────────────────────────────────────────────────────────
@@ -89,18 +89,18 @@ export const enum InvalidationStrategy {
  * The workspace-level context: folders, hierarchy, language composition.
  */
 export interface IWorkspaceContext {
-	/** Root workspace folders */
-	readonly rootFolders: readonly URI[];
-	/** File extension → count distribution */
-	readonly languageDistribution: ReadonlyMap<string, number>;
-	/** Total file count in workspace */
-	readonly totalFileCount: number;
-	/** Workspace folder hierarchy depth (max) */
-	readonly maxDepth: number;
-	/** Timestamp of last workspace scan */
-	readonly scannedAt: number;
-	/** Freshness of this context */
-	readonly freshness: ContextFreshness;
+        /** Root workspace folders */
+        readonly rootFolders: readonly URI[];
+        /** File extension → count distribution */
+        readonly languageDistribution: ReadonlyMap<string, number>;
+        /** Total file count in workspace */
+        readonly totalFileCount: number;
+        /** Workspace folder hierarchy depth (max) */
+        readonly maxDepth: number;
+        /** Timestamp of last workspace scan */
+        readonly scannedAt: number;
+        /** Freshness of this context */
+        readonly freshness: ContextFreshness;
 }
 
 // ─── File Context ──────────────────────────────────────────────────────────────
@@ -109,30 +109,30 @@ export interface IWorkspaceContext {
  * Per-file context: edit frequency, open state, recency, execution linkage.
  */
 export interface IFileContext {
-	/** File URI */
-	readonly uri: URI;
-	/** File extension (language indicator) */
-	readonly extension: string;
-	/** Whether this file is currently open in an editor */
-	readonly isOpen: boolean;
-	/** Whether this file has unsaved changes */
-	readonly isDirty: boolean;
-	/** Number of times this file has been edited (from execution graph) */
-	readonly editCount: number;
-	/** Number of times this file has been opened */
-	readonly openCount: number;
-	/** Timestamp of last edit (from execution graph or save) */
-	readonly lastEditedAt: number | undefined;
-	/** Timestamp of last open */
-	readonly lastOpenedAt: number | undefined;
-	/** Files frequently co-modified with this file */
-	readonly coModifiedFiles: readonly URI[];
-	/** Mutation hotspot score (0–1, higher = more active) */
-	readonly hotspotScore: number;
-	/** Freshness of this file's context */
-	readonly freshness: ContextFreshness;
-	/** Invalidation strategy */
-	readonly invalidationStrategy: InvalidationStrategy;
+        /** File URI */
+        readonly uri: URI;
+        /** File extension (language indicator) */
+        readonly extension: string;
+        /** Whether this file is currently open in an editor */
+        readonly isOpen: boolean;
+        /** Whether this file has unsaved changes */
+        readonly isDirty: boolean;
+        /** Number of times this file has been edited (from execution graph) */
+        readonly editCount: number;
+        /** Number of times this file has been opened */
+        readonly openCount: number;
+        /** Timestamp of last edit (from execution graph or save) */
+        readonly lastEditedAt: number | undefined;
+        /** Timestamp of last open */
+        readonly lastOpenedAt: number | undefined;
+        /** Files frequently co-modified with this file */
+        readonly coModifiedFiles: readonly URI[];
+        /** Mutation hotspot score (0–1, higher = more active) */
+        readonly hotspotScore: number;
+        /** Freshness of this file's context */
+        readonly freshness: ContextFreshness;
+        /** Invalidation strategy */
+        readonly invalidationStrategy: InvalidationStrategy;
 }
 
 // ─── Symbol Context ────────────────────────────────────────────────────────────
@@ -142,20 +142,20 @@ export interface IFileContext {
  * Lightweight — not a full AST node, just enough for intelligence.
  */
 export interface ISymbolContext {
-	/** Symbol name */
-	readonly name: string;
-	/** Symbol kind (function, class, variable, etc.) */
-	readonly kind: SymbolKind;
-	/** File URI where the symbol is defined */
-	readonly definedIn: URI;
-	/** Line number of the definition (1-based) */
-	readonly line: number;
-	/** Files that import/use this symbol */
-	readonly referencedBy: readonly URI[];
-	/** Whether this symbol is exported */
-	readonly isExported: boolean;
-	/** Freshness */
-	readonly freshness: ContextFreshness;
+        /** Symbol name */
+        readonly name: string;
+        /** Symbol kind (function, class, variable, etc.) */
+        readonly kind: SymbolKind;
+        /** File URI where the symbol is defined */
+        readonly definedIn: URI;
+        /** Line number of the definition (1-based) */
+        readonly line: number;
+        /** Files that import/use this symbol */
+        readonly referencedBy: readonly URI[];
+        /** Whether this symbol is exported */
+        readonly isExported: boolean;
+        /** Freshness */
+        readonly freshness: ContextFreshness;
 }
 
 /**
@@ -163,17 +163,17 @@ export interface ISymbolContext {
  * Deliberately simpler than VS Code's SymbolKind to keep the context model lightweight.
  */
 export const enum SymbolKind {
-	Function = 'function',
-	Class = 'class',
-	Interface = 'interface',
-	Variable = 'variable',
-	Constant = 'constant',
-	Type = 'type',
-	Enum = 'enum',
-	Method = 'method',
-	Property = 'property',
-	Module = 'module',
-	Unknown = 'unknown',
+        Function = 'function',
+        Class = 'class',
+        Interface = 'interface',
+        Variable = 'variable',
+        Constant = 'constant',
+        Type = 'type',
+        Enum = 'enum',
+        Method = 'method',
+        Property = 'property',
+        Module = 'module',
+        Unknown = 'unknown',
 }
 
 // ─── Dependency Context ────────────────────────────────────────────────────────
@@ -183,34 +183,34 @@ export const enum SymbolKind {
  * Represents an import/require relationship.
  */
 export interface IDependencyEdge {
-	/** Source file (the importer) */
-	readonly source: URI;
-	/** Target file (the imported) */
-	readonly target: URI;
-	/** Import statement text (e.g., "import { foo } from './bar'") */
-	readonly importText: string | undefined;
-	/** Confidence level of this dependency (0–1) */
-	readonly confidence: number;
-	/** Whether this was detected by static analysis or heuristics */
-	readonly source: 'static-analysis' | 'heuristic' | 'co-modification';
-	/** Freshness */
-	readonly freshness: ContextFreshness;
+        /** Source file (the importer) */
+        readonly source: URI;
+        /** Target file (the imported) */
+        readonly target: URI;
+        /** Import statement text (e.g., "import { foo } from './bar'") */
+        readonly importText: string | undefined;
+        /** Confidence level of this dependency (0–1) */
+        readonly confidence: number;
+        /** Whether this was detected by static analysis or heuristics */
+        readonly detectionMethod: 'static-analysis' | 'heuristic' | 'co-modification';
+        /** Freshness */
+        readonly freshness: ContextFreshness;
 }
 
 /**
  * The full dependency map for the workspace.
  */
 export interface IDependencyMap {
-	/** All dependency edges */
-	readonly edges: readonly IDependencyEdge[];
-	/** Files with the most dependents (imported by many) */
-	readonly hubFiles: readonly URI[];
-	/** Files with the most dependencies (import many) */
-	readonly leafFiles: readonly URI[];
-	/** Strongly connected components (circular dependencies) */
-	readonly cycles: readonly ReadonlyArray<readonly URI[]>;
-	/** Freshness */
-	readonly freshness: ContextFreshness;
+        /** All dependency edges */
+        readonly edges: readonly IDependencyEdge[];
+        /** Files with the most dependents (imported by many) */
+        readonly hubFiles: readonly URI[];
+        /** Files with the most dependencies (import many) */
+        readonly leafFiles: readonly URI[];
+        /** Strongly connected components (circular dependencies) */
+        readonly cycles: readonly ReadonlyArray<readonly URI[]>;
+        /** Freshness */
+        readonly freshness: ContextFreshness;
 }
 
 // ─── Execution Context ─────────────────────────────────────────────────────────
@@ -219,16 +219,16 @@ export interface IDependencyMap {
  * Execution-related context derived from the execution graph.
  */
 export interface IExecutionContext {
-	/** Files with the most execution graph nodes (high activity) */
-	readonly activeFiles: readonly URI[];
-	/** Currently active execution scopes */
-	readonly activeScopes: readonly string[];
-	/** Recent execution lineage for the active file */
-	readonly recentLineage: readonly IExecutionNode[];
-	/** Files currently being mutated */
-	readonly mutatingFiles: readonly URI[];
-	/** Freshness (always Live — derived from graph in real-time) */
-	readonly freshness: ContextFreshness.Live;
+        /** Files with the most execution graph nodes (high activity) */
+        readonly activeFiles: readonly URI[];
+        /** Currently active execution scopes */
+        readonly activeScopes: readonly string[];
+        /** Recent execution lineage for the active file */
+        readonly recentLineage: readonly IExecutionNode[];
+        /** Files currently being mutated */
+        readonly mutatingFiles: readonly URI[];
+        /** Freshness (always Live — derived from graph in real-time) */
+        readonly freshness: ContextFreshness.Live;
 }
 
 // ─── Mutation Context ──────────────────────────────────────────────────────────
@@ -238,20 +238,20 @@ export interface IExecutionContext {
  * A hotspot is a file/region that has been frequently edited.
  */
 export interface IMutationHotspot {
-	/** File URI */
-	readonly fileUri: URI;
-	/** Hotspot score (0–1) */
-	readonly score: number;
-	/** Number of mutations in the tracking window */
-	readonly mutationCount: number;
-	/** Time window start */
-	readonly windowStart: number;
-	/** Time window end */
-	readonly windowEnd: number;
-	/** Primary mutation source */
-	readonly primarySource: AIMutationSource;
-	/** Whether this hotspot is currently active (mutations in last 5 min) */
-	readonly active: boolean;
+        /** File URI */
+        readonly fileUri: URI;
+        /** Hotspot score (0–1) */
+        readonly score: number;
+        /** Number of mutations in the tracking window */
+        readonly mutationCount: number;
+        /** Time window start */
+        readonly windowStart: number;
+        /** Time window end */
+        readonly windowEnd: number;
+        /** Primary mutation source */
+        readonly primarySource: AIMutationSource;
+        /** Whether this hotspot is currently active (mutations in last 5 min) */
+        readonly active: boolean;
 }
 
 // ─── Temporal Context ──────────────────────────────────────────────────────────
@@ -260,38 +260,38 @@ export interface IMutationHotspot {
  * An execution cluster — a group of related mutations over time.
  */
 export interface IExecutionCluster {
-	/** Cluster ID */
-	readonly id: string;
-	/** Start time */
-	readonly startedAt: number;
-	/** End time */
-	readonly endedAt: number;
-	/** Files involved */
-	readonly files: readonly URI[];
-	/** Number of mutations */
-	readonly mutationCount: number;
-	/** Dominant mutation source */
-	readonly dominantSource: AIMutationSource;
-	/** Cluster label (auto-generated) */
-	readonly label: string;
+        /** Cluster ID */
+        readonly id: string;
+        /** Start time */
+        readonly startedAt: number;
+        /** End time */
+        readonly endedAt: number;
+        /** Files involved */
+        readonly files: readonly URI[];
+        /** Number of mutations */
+        readonly mutationCount: number;
+        /** Dominant mutation source */
+        readonly dominantSource: AIMutationSource;
+        /** Cluster label (auto-generated) */
+        readonly label: string;
 }
 
 /**
  * Temporal project memory — evolution over time.
  */
 export interface ITemporalContext {
-	/** Recent execution clusters (last 24 hours) */
-	readonly recentClusters: readonly IExecutionCluster[];
-	/** Files with increasing activity (trending up) */
-	readonly trendingFiles: readonly URI[];
-	/** Files with decreasing activity (trending down) */
-	readonly decliningFiles: readonly URI[];
-	/** Most mutated files over the project lifetime */
-	readonly allTimeHotspots: readonly IMutationHotspot[];
-	/** Project age in days */
-	readonly projectAgeDays: number;
-	/** Freshness */
-	readonly freshness: ContextFreshness;
+        /** Recent execution clusters (last 24 hours) */
+        readonly recentClusters: readonly IExecutionCluster[];
+        /** Files with increasing activity (trending up) */
+        readonly trendingFiles: readonly URI[];
+        /** Files with decreasing activity (trending down) */
+        readonly decliningFiles: readonly URI[];
+        /** Most mutated files over the project lifetime */
+        readonly allTimeHotspots: readonly IMutationHotspot[];
+        /** Project age in days */
+        readonly projectAgeDays: number;
+        /** Freshness */
+        readonly freshness: ContextFreshness;
 }
 
 // ─── Context Update Events ─────────────────────────────────────────────────────
@@ -300,14 +300,14 @@ export interface ITemporalContext {
  * Fired when any context domain is updated.
  */
 export interface IContextUpdateEvent {
-	/** Which domain was updated */
-	readonly domain: ContextDomain;
-	/** What triggered the update */
-	readonly trigger: string;
-	/** Timestamp */
-	readonly timestamp: number;
-	/** URIs affected by this update (if applicable) */
-	readonly affectedUris: readonly URI[];
+        /** Which domain was updated */
+        readonly domain: ContextDomain;
+        /** What triggered the update */
+        readonly trigger: string;
+        /** Timestamp */
+        readonly timestamp: number;
+        /** URIs affected by this update (if applicable) */
+        readonly affectedUris: readonly URI[];
 }
 
 // ─── Query Parameters ──────────────────────────────────────────────────────────
@@ -316,18 +316,18 @@ export interface IContextUpdateEvent {
  * Parameters for context queries from AI agents.
  */
 export interface IContextQueryParams {
-	/** Focus file (queries return results relevant to this file) */
-	readonly focusFile?: URI;
-	/** Maximum results to return */
-	readonly limit?: number;
-	/** Minimum freshness level */
-	readonly minFreshness?: ContextFreshness;
-	/** Context domains to include */
-	readonly domains?: ContextDomain[];
-	/** Time window start (for temporal queries) */
-	readonly after?: number;
-	/** Time window end (for temporal queries) */
-	readonly before?: number;
+        /** Focus file (queries return results relevant to this file) */
+        readonly focusFile?: URI;
+        /** Maximum results to return */
+        readonly limit?: number;
+        /** Minimum freshness level */
+        readonly minFreshness?: ContextFreshness;
+        /** Context domains to include */
+        readonly domains?: ContextDomain[];
+        /** Time window start (for temporal queries) */
+        readonly after?: number;
+        /** Time window end (for temporal queries) */
+        readonly before?: number;
 }
 
 // ─── Service Interface ─────────────────────────────────────────────────────────
@@ -350,145 +350,145 @@ export interface IContextQueryParams {
  *   - Performance safety (background indexing, debouncing, cache eviction)
  */
 export interface IAIContextService {
-	readonly _serviceBrand: undefined;
+        readonly _serviceBrand: undefined;
 
-	// ─── Context Domains ─────────────────────────────────────────────────────
+        // ─── Context Domains ─────────────────────────────────────────────────────
 
-	/**
-	 * Get the current workspace context.
-	 */
-	readonly workspaceContext: IWorkspaceContext;
+        /**
+         * Get the current workspace context.
+         */
+        readonly workspaceContext: IWorkspaceContext;
 
-	/**
-	 * Get the context for a specific file.
-	 */
-	getFileContext(uri: URI): IFileContext | undefined;
+        /**
+         * Get the context for a specific file.
+         */
+        getFileContext(uri: URI): IFileContext | undefined;
 
-	/**
-	 * Get all file contexts (for queries and bulk access).
-	 */
-	getAllFileContexts(): IFileContext[];
+        /**
+         * Get all file contexts (for queries and bulk access).
+         */
+        getAllFileContexts(): IFileContext[];
 
-	/**
-	 * Get the dependency map for the workspace.
-	 */
-	readonly dependencyMap: IDependencyMap;
+        /**
+         * Get the dependency map for the workspace.
+         */
+        readonly dependencyMap: IDependencyMap;
 
-	/**
-	 * Get the execution context (derived from ExecutionGraphService).
-	 */
-	readonly executionContext: IExecutionContext;
+        /**
+         * Get the execution context (derived from ExecutionGraphService).
+         */
+        readonly executionContext: IExecutionContext;
 
-	/**
-	 * Get the mutation hotspots.
-	 */
-	readonly mutationHotspots: readonly IMutationHotspot[];
+        /**
+         * Get the mutation hotspots.
+         */
+        readonly mutationHotspots: readonly IMutationHotspot[];
 
-	/**
-	 * Get the temporal context.
-	 */
-	readonly temporalContext: ITemporalContext;
+        /**
+         * Get the temporal context.
+         */
+        readonly temporalContext: ITemporalContext;
 
-	// ─── Symbol Access ──────────────────────────────────────────────────────
+        // ─── Symbol Access ──────────────────────────────────────────────────────
 
-	/**
-	 * Get symbols defined in a file.
-	 */
-	getSymbolsInFile(uri: URI): ISymbolContext[];
+        /**
+         * Get symbols defined in a file.
+         */
+        getSymbolsInFile(uri: URI): ISymbolContext[];
 
-	/**
-	 * Get symbols that reference the given file (importers).
-	 */
-	getFileReferencedBy(uri: URI): readonly URI[];
+        /**
+         * Get symbols that reference the given file (importers).
+         */
+        getFileReferencedBy(uri: URI): readonly URI[];
 
-	/**
-	 * Find symbols by name prefix (for AI agent lookup).
-	 */
-	findSymbols(query: string, limit?: number): ISymbolContext[];
+        /**
+         * Find symbols by name prefix (for AI agent lookup).
+         */
+        findSymbols(query: string, limit?: number): ISymbolContext[];
 
-	// ─── Context Update Events ──────────────────────────────────────────────
+        // ─── Context Update Events ──────────────────────────────────────────────
 
-	/**
-	 * Fired when any context domain is updated.
-	 */
-	readonly onDidUpdateContext: Event<IContextUpdateEvent>;
+        /**
+         * Fired when any context domain is updated.
+         */
+        readonly onDidUpdateContext: Event<IContextUpdateEvent>;
 
-	/**
-	 * Force a refresh of a specific context domain.
-	 * Useful when the engine detects it may be stale.
-	 */
-	refreshDomain(domain: ContextDomain): Promise<void>;
+        /**
+         * Force a refresh of a specific context domain.
+         * Useful when the engine detects it may be stale.
+         */
+        refreshDomain(domain: ContextDomain): Promise<void>;
 
-	// ─── Query API (for AI agents) ──────────────────────────────────────────
+        // ─── Query API (for AI agents) ──────────────────────────────────────────
 
-	/**
-	 * Get files relevant to the given focus file.
-	 * Includes co-modified files, dependency neighbors, and hotspot-adjacent files.
-	 */
-	getRelevantFiles(params: IContextQueryParams): IFileContext[];
+        /**
+         * Get files relevant to the given focus file.
+         * Includes co-modified files, dependency neighbors, and hotspot-adjacent files.
+         */
+        getRelevantFiles(params: IContextQueryParams): IFileContext[];
 
-	/**
-	 * Get recent execution context for a file.
-	 */
-	getRecentExecutionContext(uri: URI): IExecutionNode[];
+        /**
+         * Get recent execution context for a file.
+         */
+        getRecentExecutionContext(uri: URI): IExecutionNode[];
 
-	/**
-	 * Get the dependency chain for a file (transitive closure).
-	 */
-	getDependencyChain(uri: URI, direction?: 'upstream' | 'downstream'): IDependencyEdge[];
+        /**
+         * Get the dependency chain for a file (transitive closure).
+         */
+        getDependencyChain(uri: URI, direction?: 'upstream' | 'downstream'): IDependencyEdge[];
 
-	/**
-	 * Get the current workspace hotspots.
-	 */
-	getWorkspaceHotspots(limit?: number): IMutationHotspot[];
+        /**
+         * Get the current workspace hotspots.
+         */
+        getWorkspaceHotspots(limit?: number): IMutationHotspot[];
 
-	/**
-	 * Get an execution cluster by ID.
-	 */
-	getExecutionCluster(clusterId: string): IExecutionCluster | undefined;
+        /**
+         * Get an execution cluster by ID.
+         */
+        getExecutionCluster(clusterId: string): IExecutionCluster | undefined;
 
-	/**
-	 * Get symbol relationships for a file.
-	 */
-	getSymbolRelations(uri: URI): { defined: ISymbolContext[]; imported: ISymbolContext[]; importing: readonly URI[] };
+        /**
+         * Get symbol relationships for a file.
+         */
+        getSymbolRelations(uri: URI): { defined: ISymbolContext[]; imported: ISymbolContext[]; importing: readonly URI[] };
 
-	// ─── Manual Triggers ────────────────────────────────────────────────────
+        // ─── Manual Triggers ────────────────────────────────────────────────────
 
-	/**
-	 * Notify the context engine that a file was opened.
-	 * Called by the workspace intelligence tracker.
-	 */
-	notifyFileOpened(uri: URI): void;
+        /**
+         * Notify the context engine that a file was opened.
+         * Called by the workspace intelligence tracker.
+         */
+        notifyFileOpened(uri: URI): void;
 
-	/**
-	 * Notify the context engine that a file was closed.
-	 */
-	notifyFileClosed(uri: URI): void;
+        /**
+         * Notify the context engine that a file was closed.
+         */
+        notifyFileClosed(uri: URI): void;
 
-	/**
-	 * Notify the context engine that a file was modified.
-	 */
-	notifyFileModified(uri: URI): void;
+        /**
+         * Notify the context engine that a file was modified.
+         */
+        notifyFileModified(uri: URI): void;
 
-	// ─── Persistence ────────────────────────────────────────────────────────
+        // ─── Persistence ────────────────────────────────────────────────────────
 
-	/**
-	 * Force a flush of context data to persistent storage.
-	 */
-	flush(): Promise<void>;
+        /**
+         * Force a flush of context data to persistent storage.
+         */
+        flush(): Promise<void>;
 
-	/**
-	 * Get the total number of tracked files.
-	 */
-	readonly trackedFileCount: number;
+        /**
+         * Get the total number of tracked files.
+         */
+        readonly trackedFileCount: number;
 
-	/**
-	 * Get the total number of tracked symbols.
-	 */
-	readonly trackedSymbolCount: number;
+        /**
+         * Get the total number of tracked symbols.
+         */
+        readonly trackedSymbolCount: number;
 
-	/**
-	 * Get the total number of dependency edges.
-	 */
-	readonly trackedDependencyCount: number;
+        /**
+         * Get the total number of dependency edges.
+         */
+        readonly trackedDependencyCount: number;
 }
