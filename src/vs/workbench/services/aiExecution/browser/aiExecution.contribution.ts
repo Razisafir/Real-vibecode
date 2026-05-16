@@ -1,10 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 9 Global Execution Brain
+ *  AI Execution Kernel — Phase 13 UX Transformation Layer
  *  Real Vibecode — AI-Native IDE
  *
  *  aiExecution.contribution.ts — Service registration + integration hooks.
- *  Phase 10: Adds System Stabilization service with correct dependency order.
- *  Phase 11: Adds Execution Replay Engine service.
+ *  Phase 13: Adds UX Transformation services (10 new singletons).
  *
  *  Full Registration Order:
  *    1. IObservabilityService (no AI kernel deps)
@@ -25,6 +24,17 @@
  *    16. IBrainDashboardService (deps: Brain, Agent, Process, Graph, Observability, Context, State)
  *    17. ISystemStabilizationService (deps: Brain, Agent, Process, Graph, Context, Observability, State)
  *    18. IExecutionReplayService (deps: Brain, Agent, Process, Graph, Context, Observability, State, Stabilization, Execution)
+ *    19. IDesignSystemService (no AI kernel deps — pure design governance)
+ *    20. IAIPresenceService (no AI kernel deps — presence governance)
+ *    21. IEditorExperienceService (no AI kernel deps — editor-first experience)
+ *    22. ICognitiveLoadService (no AI kernel deps — cognitive load tracking)
+ *    23. IPremiumMicrointeractionService (no AI kernel deps — motion system)
+ *    24. IAITransparencyService (no AI kernel deps — AI explanation layer)
+ *    25. IPanelHierarchyService (no AI kernel deps — visual hierarchy)
+ *    26. IAttentionOrchestratorService (no AI kernel deps — attention management)
+ *    27. IPerceivedPerformanceService (no AI kernel deps — perceived performance)
+ *    28. ISignatureIdentityService (no AI kernel deps — product identity)
+ *    29. IUXConsistencyService (deps: CognitiveLoad, AIPresence, PanelHierarchy)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -91,6 +101,10 @@ import { ReplayEngineService } from './replayEngineService.js';
 import { IDesignSystemService } from '../common/designSystem.js';
 import { DesignSystemService } from './designSystemService.js';
 
+// Phase 13 imports
+import { IAIPresenceService, IEditorExperienceService, ICognitiveLoadService, IPremiumMicrointeractionService, IAITransparencyService, IPanelHierarchyService, IAttentionOrchestratorService, IPerceivedPerformanceService, IUXConsistencyService, ISignatureIdentityService } from '../common/uxTransformation.js';
+import { AIPresenceService, EditorExperienceService, CognitiveLoadService, PremiumMicrointeractionService, AITransparencyService, PanelHierarchyService, AttentionOrchestratorService, PerceivedPerformanceService, UXConsistencyService, SignatureIdentityService } from './uxTransformationService.js';
+
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
 // ORDER MATTERS: Services are registered in dependency order.
@@ -153,6 +167,36 @@ registerSingleton(IExecutionReplayService, ReplayEngineService, InstantiationTyp
 
 // Phase 12.19: DesignSystemService (no AI kernel deps — pure design governance)
 registerSingleton(IDesignSystemService, DesignSystemService, InstantiationType.Delayed);
+
+// Phase 13.20: AIPresenceService (no AI kernel deps — presence governance)
+registerSingleton(IAIPresenceService, AIPresenceService, InstantiationType.Delayed);
+
+// Phase 13.21: EditorExperienceService (no AI kernel deps — editor-first experience)
+registerSingleton(IEditorExperienceService, EditorExperienceService, InstantiationType.Delayed);
+
+// Phase 13.22: CognitiveLoadService (no AI kernel deps — cognitive load tracking)
+registerSingleton(ICognitiveLoadService, CognitiveLoadService, InstantiationType.Delayed);
+
+// Phase 13.23: PremiumMicrointeractionService (no AI kernel deps — motion system)
+registerSingleton(IPremiumMicrointeractionService, PremiumMicrointeractionService, InstantiationType.Delayed);
+
+// Phase 13.24: AITransparencyService (no AI kernel deps — AI explanation layer)
+registerSingleton(IAITransparencyService, AITransparencyService, InstantiationType.Delayed);
+
+// Phase 13.25: PanelHierarchyService (no AI kernel deps — visual hierarchy)
+registerSingleton(IPanelHierarchyService, PanelHierarchyService, InstantiationType.Delayed);
+
+// Phase 13.26: AttentionOrchestratorService (no AI kernel deps — attention management)
+registerSingleton(IAttentionOrchestratorService, AttentionOrchestratorService, InstantiationType.Delayed);
+
+// Phase 13.27: PerceivedPerformanceService (no AI kernel deps — perceived performance)
+registerSingleton(IPerceivedPerformanceService, PerceivedPerformanceService, InstantiationType.Delayed);
+
+// Phase 13.28: SignatureIdentityService (no AI kernel deps — product identity)
+registerSingleton(ISignatureIdentityService, SignatureIdentityService, InstantiationType.Delayed);
+
+// Phase 13.29: UXConsistencyService (deps: CognitiveLoad, AIPresence, PanelHierarchy)
+registerSingleton(IUXConsistencyService, UXConsistencyService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
