@@ -1,18 +1,21 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 5 End-to-End Integration
+ *  AI Execution Kernel — Phase 6 AI Context Engine
  *  Real Vibecode — AI-Native IDE
  *
  *  aiExecution.contribution.ts — Service registration + integration hooks.
- *  Phase 5: Registers ALL services in correct dependency order,
- *  runs bootstrap sequence, and wires up cross-service event subscriptions.
+ *  Phase 6: Adds Context Engine services with correct dependency order.
  *
- *  Registration Order (MUST be followed):
+ *  Full Registration Order:
  *    1. IObservabilityService (no AI kernel deps)
- *    2. IAIUnifiedStateService (deps: ExecutionGraphService)
- *    3. IExecutionGraphService (already registered in Phase 3)
- *    4. IAIExecutionService (deps: UnifiedState, Observability, Graph)
+ *    2. IExecutionGraphService
+ *    3. IAIUnifiedStateService (deps: ExecutionGraphService)
+ *    4. IAIExecutionService (deps: Graph, UnifiedState, Observability)
  *    5. IAIExecutionUIService (deps: UnifiedState, Graph, Editor)
  *    6. IWorkspaceBootstrapService (deps: UnifiedState, Graph, Execution)
+ *    7. ISymbolDependencyAnalyzer (deps: TextFileService)
+ *    8. IAIContextService (deps: EditorService, WorkspaceContext, TextFile, Graph)
+ *    9. IContextPersistenceService (deps: ContextService, FileService)
+ *    10. IAIContextUIService (deps: ContextService)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -39,6 +42,16 @@ import { IObservabilityService } from '../common/observabilityService.js';
 import { ObservabilityService } from './observabilityService.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 
+// Phase 6 imports
+import { IAIContextService } from '../common/aiContextService.js';
+import { AIContextService } from './aiContextService.js';
+import { ISymbolDependencyAnalyzer } from '../common/symbolDependencyAnalyzer.js';
+import { SymbolDependencyAnalyzer } from './symbolDependencyAnalyzer.js';
+import { IContextPersistenceService } from '../common/contextPersistence.js';
+import { ContextPersistenceService } from './contextPersistence.js';
+import { IAIContextUIService } from '../common/aiContextUI.js';
+import { AIContextUIService } from './aiContextUIService.js';
+
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
 // ORDER MATTERS: Services are registered in dependency order.
@@ -48,7 +61,7 @@ import { ILogService } from '../../../../platform/log/common/log.js';
 // Phase 5.1: ObservabilityService (leaf dependency — no AI kernel deps)
 registerSingleton(IObservabilityService, ObservabilityService, InstantiationType.Delayed);
 
-// Phase 5.2: ExecutionGraphService (Phase 3 — already had this)
+// Phase 5.2: ExecutionGraphService
 registerSingleton(IExecutionGraphService, ExecutionGraphService, InstantiationType.Delayed);
 
 // Phase 5.3: UnifiedStateService (deps: GraphService)
@@ -63,139 +76,138 @@ registerSingleton(IAIExecutionUIService, AIExecutionUIService, InstantiationType
 // Phase 5.6: WorkspaceBootstrapService (deps: UnifiedState, Graph, Execution)
 registerSingleton(IWorkspaceBootstrapService, WorkspaceBootstrapService, InstantiationType.Delayed);
 
+// Phase 6.7: SymbolDependencyAnalyzer (deps: TextFileService)
+registerSingleton(ISymbolDependencyAnalyzer, SymbolDependencyAnalyzer, InstantiationType.Delayed);
+
+// Phase 6.8: AIContextService (deps: EditorService, WorkspaceContext, TextFile, Graph)
+registerSingleton(IAIContextService, AIContextService, InstantiationType.Delayed);
+
+// Phase 6.9: ContextPersistenceService (deps: ContextService, FileService)
+registerSingleton(IContextPersistenceService, ContextPersistenceService, InstantiationType.Delayed);
+
+// Phase 6.10: AIContextUIService (deps: ContextService)
+registerSingleton(IAIContextUIService, AIContextUIService, InstantiationType.Delayed);
+
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
 export const AI_BOOTSTRAP_RUNNER_ID = 'workbench.contrib.aiBootstrapRunner';
 
 class AIBootstrapRunner extends Disposable implements IWorkbenchContribution {
 
-        constructor(
-                @IWorkspaceBootstrapService private readonly bootstrapService: IWorkspaceBootstrapService,
-                @IAIUnifiedStateService private readonly stateService: IAIUnifiedStateService,
-                @ILogService private readonly logService: ILogService,
-        ) {
-                super();
+	constructor(
+		@IWorkspaceBootstrapService private readonly bootstrapService: IWorkspaceBootstrapService,
+		@IAIUnifiedStateService private readonly stateService: IAIUnifiedStateService,
+		@ILogService private readonly logService: ILogService,
+	) {
+		super();
+		this._runBootstrap();
+	}
 
-                // Run bootstrap after workbench has restored
-                this._runBootstrap();
-        }
-
-        private async _runBootstrap(): Promise<void> {
-                try {
-                        const result = await this.bootstrapService.runBootstrap();
-                        if (result.success) {
-                                this.logService.info(`[AIBootstrapRunner] Kernel ready in ${result.totalDuration}ms`);
-                        } else {
-                                this.logService.error(`[AIBootstrapRunner] Kernel bootstrap FAILED:`, result.errors);
-                        }
-                } catch (err) {
-                        this.logService.error(`[AIBootstrapRunner] Bootstrap exception:`, err);
-                }
-        }
+	private async _runBootstrap(): Promise<void> {
+		try {
+			const result = await this.bootstrapService.runBootstrap();
+			if (result.success) {
+				this.logService.info(`[AIBootstrapRunner] Kernel ready in ${result.totalDuration}ms`);
+			} else {
+				this.logService.error(`[AIBootstrapRunner] Kernel bootstrap FAILED:`, result.errors);
+			}
+		} catch (err) {
+			this.logService.error(`[AIBootstrapRunner] Bootstrap exception:`, err);
+		}
+	}
 }
 
-// ─── File Mutation Hook (Phase 5: Fully Integrated) ──────────────────────────
+// ─── File Mutation Hook (Phase 6: Context Engine Integrated) ──────────────────
 
 export const AI_FILE_MUTATION_HOOK_ID = 'workbench.contrib.aiFileMutationHook';
 
 class AIFileMutationHook extends Disposable implements IWorkbenchContribution, ITextFileSaveParticipant {
 
-        readonly ordinal = -1000;
+	readonly ordinal = -1000;
 
-        constructor(
-                @IAIExecutionService private readonly aiExecutionService: IAIExecutionService,
-                @ITextFileService private readonly textFileService: ITextFileService,
-                @IExecutionGraphService private readonly graphService: IExecutionGraphService,
-                @IAIUnifiedStateService private readonly stateService: IAIUnifiedStateService,
-                @IObservabilityService private readonly observabilityService: IObservabilityService,
-        ) {
-                super();
-                this._register(this.textFileService.files.addSaveParticipant(this));
-        }
+	constructor(
+		@IAIExecutionService private readonly aiExecutionService: IAIExecutionService,
+		@ITextFileService private readonly textFileService: ITextFileService,
+		@IExecutionGraphService private readonly graphService: IExecutionGraphService,
+		@IAIUnifiedStateService private readonly stateService: IAIUnifiedStateService,
+		@IObservabilityService private readonly observabilityService: IObservabilityService,
+		@IAIContextService private readonly contextService: IAIContextService,
+	) {
+		super();
+		this._register(this.textFileService.files.addSaveParticipant(this));
+	}
 
-        async participate(
-                model: ITextFileEditorModel,
-                context: ITextFileSaveParticipantContext,
-                progress: IProgress<IProgressStep>,
-                token: CancellationToken
-        ): Promise<void> {
-                if (token.isCancellationRequested) {
-                        return;
-                }
+	async participate(
+		model: ITextFileEditorModel,
+		context: ITextFileSaveParticipantContext,
+		progress: IProgress<IProgressStep>,
+		token: CancellationToken
+	): Promise<void> {
+		if (token.isCancellationRequested) {
+			return;
+		}
 
-                const resource = model.resource;
-                const activeContext = this.aiExecutionService.activeMutationContext;
-                const hasBypass = activeContext?.bypassToken && this.aiExecutionService.isBypassTokenValid(activeContext.bypassToken);
+		const resource = model.resource;
+		const activeContext = this.aiExecutionService.activeMutationContext;
+		const hasBypass = activeContext?.bypassToken && this.aiExecutionService.isBypassTokenValid(activeContext.bypassToken);
 
-                // Create a Save graph node for every save
-                const saveNode = this.graphService.createNode({
-                        type: ExecutionNodeType.Save,
-                        label: `Save ${resource.path}`,
-                        mutationSource: hasBypass ? (activeContext?.source ?? AIMutationSource.AIInternal) : AIMutationSource.UserAction,
-                        trusted: true,
-                        description: hasBypass ? 'AI-initiated save' : 'User-initiated save',
-                        fileUri: resource,
-                        reversible: true,
-                        rollbackStrategy: 2, // RollbackStrategy.EditorUndo
-                });
+		// Create a Save graph node for every save
+		const saveNode = this.graphService.createNode({
+			type: ExecutionNodeType.Save,
+			label: `Save ${resource.path}`,
+			mutationSource: hasBypass ? (activeContext?.source ?? AIMutationSource.AIInternal) : AIMutationSource.UserAction,
+			trusted: true,
+			description: hasBypass ? 'AI-initiated save' : 'User-initiated save',
+			fileUri: resource,
+			reversible: true,
+			rollbackStrategy: 2,
+		});
 
-                // If there's an active AI mutation context, create a Triggered edge
-                if (activeContext && activeContext.parentExecutionId) {
-                        this.graphService.createEdge(activeContext.parentExecutionId, saveNode.id, ExecutionEdgeType.Triggered);
-                }
+		if (activeContext && activeContext.parentExecutionId) {
+			this.graphService.createEdge(activeContext.parentExecutionId, saveNode.id, ExecutionEdgeType.Triggered);
+		}
 
-                // Complete the save node immediately
-                this.graphService.completeNode(saveNode.id, { success: true });
+		this.graphService.completeNode(saveNode.id, { success: true });
 
-                // Track in observability
-                this.observabilityService.addTrace(
-                        4, // TraceCategory.Execution
-                        1, // TraceLevel.Info
-                        `Save completed: ${resource.path}`,
-                        saveNode.id,
-                        resource,
-                        hasBypass ? activeContext?.source : AIMutationSource.UserAction,
-                );
+		// Phase 6: Notify context engine about file modification
+		this.contextService.notifyFileModified(resource);
 
-                progress.report({ message: `AI kernel: save tracked in execution graph` });
-        }
+		progress.report({ message: `AI kernel: save tracked in execution graph + context engine` });
+	}
 }
 
-// ─── Bulk Edit Interceptor (Phase 5: Observability-integrated) ────────────────
+// ─── Bulk Edit Interceptor (Phase 6: Context-integrated) ─────────────────────
 
 export const AI_BULK_EDIT_INTERCEPTOR_ID = 'workbench.contrib.aiBulkEditInterceptor';
 
 class AIBulkEditInterceptor extends Disposable implements IWorkbenchContribution {
 
-        constructor(
-                @IAIExecutionService private readonly aiExecutionService: IAIExecutionService,
-                @IBulkEditService private readonly bulkEditService: IBulkEditService,
-                @IExecutionGraphService private readonly graphService: IExecutionGraphService,
-                @IObservabilityService private readonly observabilityService: IObservabilityService,
-        ) {
-                super();
-                // Phase 5: Observability integration added.
-                // The interceptor observes external bulk edits and creates graph nodes for them.
-                // Future phases may intercept at the IBulkEditService level for policy enforcement.
-        }
+	constructor(
+		@IAIExecutionService private readonly aiExecutionService: IAIExecutionService,
+		@IBulkEditService private readonly bulkEditService: IBulkEditService,
+		@IExecutionGraphService private readonly graphService: IExecutionGraphService,
+		@IObservabilityService private readonly observabilityService: IObservabilityService,
+	) {
+		super();
+	}
 }
 
 // ─── Register Contributions ────────────────────────────────────────────────────
 
 registerWorkbenchContribution2(
-        AI_FILE_MUTATION_HOOK_ID,
-        AIFileMutationHook,
-        WorkbenchPhase.AfterRestored
+	AI_FILE_MUTATION_HOOK_ID,
+	AIFileMutationHook,
+	WorkbenchPhase.AfterRestored
 );
 
 registerWorkbenchContribution2(
-        AI_BULK_EDIT_INTERCEPTOR_ID,
-        AIBulkEditInterceptor,
-        WorkbenchPhase.AfterRestored
+	AI_BULK_EDIT_INTERCEPTOR_ID,
+	AIBulkEditInterceptor,
+	WorkbenchPhase.AfterRestored
 );
 
 registerWorkbenchContribution2(
-        AI_BOOTSTRAP_RUNNER_ID,
-        AIBootstrapRunner,
-        WorkbenchPhase.AfterRestored
+	AI_BOOTSTRAP_RUNNER_ID,
+	AIBootstrapRunner,
+	WorkbenchPhase.AfterRestored
 );
