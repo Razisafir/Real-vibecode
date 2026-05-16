@@ -1,9 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 16 Human Workflow Engine
+ *  AI Execution Kernel — Phase 17 System Unification Bridge Layer
  *  Real Vibecode — AI-Native IDE
  *
  *  aiExecution.contribution.ts — Service registration + integration hooks.
- *  Phase 16: Adds Human Workflow services (10 new singletons).
+ *  Phase 17: Adds System Coherence services (10 new singletons).
  *
  *  Full Registration Order:
  *    1. IExecutionGraphService (no AI kernel deps)
@@ -65,6 +65,16 @@
  *    57. IWorkspaceMemoryService (no AI kernel deps — workspace memory)
  *    58. IHumanWorkflowValidationService (no AI kernel deps — workflow validation)
  *    59. ISignatureHumanExperienceModelService (no AI kernel deps — human experience)
+ *    60. ISystemCoherenceEngineService (no AI kernel deps — system coherence)
+ *    61. ICrossLayerSignalBusService (no AI kernel deps — signal routing)
+ *    62. ISystemIntentAlignmentService (no AI kernel deps — intent alignment)
+ *    63. ILayerSynchronizationService (no AI kernel deps — layer sync)
+ *    64. IGlobalEventNormalizationService (no AI kernel deps — event normalization)
+ *    65. ISystemFeedbackLoopService (no AI kernel deps — feedback loop)
+ *    66. ISystemContextMergerService (no AI kernel deps — context merging)
+ *    67. ISystemConflictResolverService (no AI kernel deps — conflict resolution)
+ *    68. IGlobalSystemHealthOrchestratorService (no AI kernel deps — health orchestration)
+ *    69. ISystemConsciousnessModelService (no AI kernel deps — consciousness model)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -146,6 +156,10 @@ import { WorkbenchShellService, SurfaceMaterialService, EditorDominanceService, 
 // Phase 16 imports
 import { IWorkflowMomentumService, IInterruptionIntelligenceService, ISessionContinuityService, ICognitiveRecoveryService, IWorkRhythmService, IIntentPersistenceService, IEmotionalFrictionService, IWorkspaceMemoryService, IHumanWorkflowValidationService, ISignatureHumanExperienceModelService } from '../common/humanWorkflow.js';
 import { WorkflowMomentumService, InterruptionIntelligenceService, SessionContinuityService, CognitiveRecoveryService, WorkRhythmService, IntentPersistenceService, EmotionalFrictionService, WorkspaceMemoryService, HumanWorkflowValidationService, SignatureHumanExperienceModelService } from './humanWorkflowService.js';
+
+// Phase 17 imports
+import { ISystemCoherenceEngineService, ICrossLayerSignalBusService, ISystemIntentAlignmentService, ILayerSynchronizationService, IGlobalEventNormalizationService, ISystemFeedbackLoopService, ISystemContextMergerService, ISystemConflictResolverService, IGlobalSystemHealthOrchestratorService, ISystemConsciousnessModelService } from '../common/systemCoherence.js';
+import { SystemCoherenceEngineService, CrossLayerSignalBusService, SystemIntentAlignmentService, LayerSynchronizationService, GlobalEventNormalizationService, SystemFeedbackLoopService, SystemContextMergerService, SystemConflictResolverService, GlobalSystemHealthOrchestratorService, SystemConsciousnessModelService } from './systemCoherenceService.js';
 
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
@@ -329,6 +343,36 @@ registerSingleton(IHumanWorkflowValidationService, HumanWorkflowValidationServic
 
 // Phase 16.59: SignatureHumanExperienceModelService (no AI kernel deps — human experience)
 registerSingleton(ISignatureHumanExperienceModelService, SignatureHumanExperienceModelService, InstantiationType.Delayed);
+
+// Phase 17.60: SystemCoherenceEngineService (no AI kernel deps — system coherence)
+registerSingleton(ISystemCoherenceEngineService, SystemCoherenceEngineService, InstantiationType.Delayed);
+
+// Phase 17.61: CrossLayerSignalBusService (no AI kernel deps — signal routing)
+registerSingleton(ICrossLayerSignalBusService, CrossLayerSignalBusService, InstantiationType.Delayed);
+
+// Phase 17.62: SystemIntentAlignmentService (no AI kernel deps — intent alignment)
+registerSingleton(ISystemIntentAlignmentService, SystemIntentAlignmentService, InstantiationType.Delayed);
+
+// Phase 17.63: LayerSynchronizationService (no AI kernel deps — layer sync)
+registerSingleton(ILayerSynchronizationService, LayerSynchronizationService, InstantiationType.Delayed);
+
+// Phase 17.64: GlobalEventNormalizationService (no AI kernel deps — event normalization)
+registerSingleton(IGlobalEventNormalizationService, GlobalEventNormalizationService, InstantiationType.Delayed);
+
+// Phase 17.65: SystemFeedbackLoopService (no AI kernel deps — feedback loop)
+registerSingleton(ISystemFeedbackLoopService, SystemFeedbackLoopService, InstantiationType.Delayed);
+
+// Phase 17.66: SystemContextMergerService (no AI kernel deps — context merging)
+registerSingleton(ISystemContextMergerService, SystemContextMergerService, InstantiationType.Delayed);
+
+// Phase 17.67: SystemConflictResolverService (no AI kernel deps — conflict resolution)
+registerSingleton(ISystemConflictResolverService, SystemConflictResolverService, InstantiationType.Delayed);
+
+// Phase 17.68: GlobalSystemHealthOrchestratorService (no AI kernel deps — health orchestration)
+registerSingleton(IGlobalSystemHealthOrchestratorService, GlobalSystemHealthOrchestratorService, InstantiationType.Delayed);
+
+// Phase 17.69: SystemConsciousnessModelService (no AI kernel deps — consciousness model)
+registerSingleton(ISystemConsciousnessModelService, SystemConsciousnessModelService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
