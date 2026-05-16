@@ -1,9 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 13 UX Transformation Layer
+ *  AI Execution Kernel — Phase 14 Adaptive Workflow Layer
  *  Real Vibecode — AI-Native IDE
  *
  *  aiExecution.contribution.ts — Service registration + integration hooks.
- *  Phase 13: Adds UX Transformation services (10 new singletons).
+ *  Phase 14: Adds Adaptive Workflow services (10 new singletons).
  *
  *  Full Registration Order:
  *    1. IObservabilityService (no AI kernel deps)
@@ -35,6 +35,16 @@
  *    27. IPerceivedPerformanceService (no AI kernel deps — perceived performance)
  *    28. ISignatureIdentityService (no AI kernel deps — product identity)
  *    29. IUXConsistencyService (deps: CognitiveLoad, AIPresence, PanelHierarchy)
+ *    30. IProgressiveDisclosureService (no AI kernel deps)
+ *    31. IUserExperienceProfileService (no AI kernel deps)
+ *    32. IAdaptiveInterfaceService (no AI kernel deps)
+ *    33. IFeatureFatigueService (no AI kernel deps)
+ *    34. IContextualMinimalismService (no AI kernel deps)
+ *    35. IFlowStateService (no AI kernel deps)
+ *    36. IAutonomyTrustService (no AI kernel deps)
+ *    37. IOnboardingExperienceService (no AI kernel deps)
+ *    38. IExpertModeService (no AI kernel deps)
+ *    39. IAdaptiveExperienceValidationService (deps: Disclosure, Profile, Fatigue, Flow, Trust, Expert, Minimalism)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -104,6 +114,10 @@ import { DesignSystemService } from './designSystemService.js';
 // Phase 13 imports
 import { IAIPresenceService, IEditorExperienceService, ICognitiveLoadService, IPremiumMicrointeractionService, IAITransparencyService, IPanelHierarchyService, IAttentionOrchestratorService, IPerceivedPerformanceService, IUXConsistencyService, ISignatureIdentityService } from '../common/uxTransformation.js';
 import { AIPresenceService, EditorExperienceService, CognitiveLoadService, PremiumMicrointeractionService, AITransparencyService, PanelHierarchyService, AttentionOrchestratorService, PerceivedPerformanceService, UXConsistencyService, SignatureIdentityService } from './uxTransformationService.js';
+
+// Phase 14 imports
+import { IProgressiveDisclosureService, IUserExperienceProfileService, IAdaptiveInterfaceService, IFeatureFatigueService, IContextualMinimalismService, IFlowStateService, IAutonomyTrustService, IOnboardingExperienceService, IExpertModeService, IAdaptiveExperienceValidationService } from '../common/adaptiveWorkflow.js';
+import { ProgressiveDisclosureService, UserExperienceProfileService, AdaptiveInterfaceService, FeatureFatigueService, ContextualMinimalismService, FlowStateService, AutonomyTrustService, OnboardingExperienceService, ExpertModeService, AdaptiveExperienceValidationService } from './adaptiveWorkflowService.js';
 
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
@@ -197,6 +211,36 @@ registerSingleton(ISignatureIdentityService, SignatureIdentityService, Instantia
 
 // Phase 13.29: UXConsistencyService (deps: CognitiveLoad, AIPresence, PanelHierarchy)
 registerSingleton(IUXConsistencyService, UXConsistencyService, InstantiationType.Delayed);
+
+// Phase 14.30: ProgressiveDisclosureService (no AI kernel deps)
+registerSingleton(IProgressiveDisclosureService, ProgressiveDisclosureService, InstantiationType.Delayed);
+
+// Phase 14.31: UserExperienceProfileService (no AI kernel deps)
+registerSingleton(IUserExperienceProfileService, UserExperienceProfileService, InstantiationType.Delayed);
+
+// Phase 14.32: AdaptiveInterfaceService (no AI kernel deps)
+registerSingleton(IAdaptiveInterfaceService, AdaptiveInterfaceService, InstantiationType.Delayed);
+
+// Phase 14.33: FeatureFatigueService (no AI kernel deps)
+registerSingleton(IFeatureFatigueService, FeatureFatigueService, InstantiationType.Delayed);
+
+// Phase 14.34: ContextualMinimalismService (no AI kernel deps)
+registerSingleton(IContextualMinimalismService, ContextualMinimalismService, InstantiationType.Delayed);
+
+// Phase 14.35: FlowStateService (no AI kernel deps)
+registerSingleton(IFlowStateService, FlowStateService, InstantiationType.Delayed);
+
+// Phase 14.36: AutonomyTrustService (no AI kernel deps)
+registerSingleton(IAutonomyTrustService, AutonomyTrustService, InstantiationType.Delayed);
+
+// Phase 14.37: OnboardingExperienceService (no AI kernel deps)
+registerSingleton(IOnboardingExperienceService, OnboardingExperienceService, InstantiationType.Delayed);
+
+// Phase 14.38: ExpertModeService (no AI kernel deps)
+registerSingleton(IExpertModeService, ExpertModeService, InstantiationType.Delayed);
+
+// Phase 14.39: AdaptiveExperienceValidationService (deps: Disclosure, Profile, Fatigue, Flow, Trust, Expert, Minimalism)
+registerSingleton(IAdaptiveExperienceValidationService, AdaptiveExperienceValidationService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
