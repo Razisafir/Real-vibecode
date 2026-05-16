@@ -1,9 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 7 Agent Orchestration System
+ *  AI Execution Kernel — Phase 8 Terminal + Process Orchestration System
  *  Real Vibecode — AI-Native IDE
  *
  *  aiExecution.contribution.ts — Service registration + integration hooks.
- *  Phase 7: Adds Agent Orchestration services with correct dependency order.
+ *  Phase 8: Adds Process Orchestration services with correct dependency order.
  *
  *  Full Registration Order:
  *    1. IObservabilityService (no AI kernel deps)
@@ -18,6 +18,8 @@
  *    10. IAIContextUIService (deps: ContextService)
  *    11. IAgentOrchestratorService (deps: Execution, Graph, Context, Observability, State)
  *    12. IAgentUIService (deps: Orchestrator, Graph, Observability, Context)
+ *    13. IAIProcessOrchestratorService (deps: Execution, Graph, Observability, AgentOrchestrator)
+ *    14. IAIProcessUIService (deps: ProcessOrchestrator)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -60,6 +62,12 @@ import { AgentOrchestratorService } from './agentOrchestratorService.js';
 import { IAgentUIService } from '../common/agentUI.js';
 import { AgentUIService } from './agentUIService.js';
 
+// Phase 8 imports
+import { IAIProcessOrchestratorService } from '../common/aiProcessOrchestratorService.js';
+import { AIProcessOrchestratorService } from './aiProcessOrchestratorService.js';
+import { IAIProcessUIService } from '../common/aiProcessUI.js';
+import { AIProcessUIService } from './aiProcessUIService.js';
+
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
 // ORDER MATTERS: Services are registered in dependency order.
@@ -101,6 +109,12 @@ registerSingleton(IAgentOrchestratorService, AgentOrchestratorService, Instantia
 
 // Phase 7.12: AgentUIService (deps: Orchestrator, Graph, Observability, Context)
 registerSingleton(IAgentUIService, AgentUIService, InstantiationType.Delayed);
+
+// Phase 8.13: AIProcessOrchestratorService (deps: Execution, Graph, Observability, AgentOrchestrator)
+registerSingleton(IAIProcessOrchestratorService, AIProcessOrchestratorService, InstantiationType.Delayed);
+
+// Phase 8.14: AIProcessUIService (deps: ProcessOrchestrator)
+registerSingleton(IAIProcessUIService, AIProcessUIService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
