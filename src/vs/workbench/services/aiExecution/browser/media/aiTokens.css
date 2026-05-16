@@ -1,0 +1,142 @@
+/*---------------------------------------------------------------------------------------------
+ *  AI Execution Kernel -- Design Token CSS
+ *  Real CSS custom properties injected into the VS Code workbench.
+ *  These tokens are consumed by all AI Execution UI surfaces.
+ *--------------------------------------------------------------------------------------------*/
+
+:root {
+  /* Spacing Scale */
+  --ai-spacing-xs: 2px;
+  --ai-spacing-sm: 4px;
+  --ai-spacing-md: 8px;
+  --ai-spacing-lg: 12px;
+  --ai-spacing-xl: 16px;
+  --ai-spacing-2xl: 24px;
+  --ai-spacing-3xl: 32px;
+  --ai-spacing-4xl: 48px;
+  --ai-spacing-5xl: 64px;
+  --ai-spacing-6xl: 96px;
+
+  /* Typography Scale */
+  --ai-font-xs: 11px;
+  --ai-font-sm: 12px;
+  --ai-font-md: 13px;
+  --ai-font-base: 14px;
+  --ai-font-lg: 16px;
+  --ai-font-xl: 20px;
+  --ai-font-weight-regular: 400;
+  --ai-font-weight-medium: 500;
+  --ai-font-weight-semibold: 600;
+  --ai-line-height-tight: 1.25;
+  --ai-line-height-normal: 1.5;
+  --ai-line-height-relaxed: 1.75;
+  --ai-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  /* Border Radius Scale */
+  --ai-radius-xs: 2px;
+  --ai-radius-sm: 4px;
+  --ai-radius-md: 6px;
+  --ai-radius-lg: 8px;
+  --ai-radius-xl: 12px;
+  --ai-radius-full: 9999px;
+
+  /* Elevation / Shadows */
+  --ai-elevation-0: none;
+  --ai-elevation-1: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+  --ai-elevation-2: 0 4px 6px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1);
+  --ai-elevation-3: 0 10px 15px rgba(0,0,0,0.2), 0 4px 6px rgba(0,0,0,0.1);
+
+  /* Motion Duration */
+  --ai-duration-instant: 0ms;
+  --ai-duration-fast: 100ms;
+  --ai-duration-normal: 200ms;
+  --ai-duration-slow: 350ms;
+  --ai-duration-deliberate: 500ms;
+  --ai-duration-exit: 150ms;
+
+  /* Motion Easing */
+  --ai-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ai-easing-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ai-easing-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Opacity */
+  --ai-opacity-hover: 0.04;
+  --ai-opacity-selected: 0.08;
+  --ai-opacity-pressed: 0.12;
+  --ai-opacity-disabled: 0.38;
+  --ai-opacity-border: 0.12;
+  --ai-opacity-divider: 0.08;
+  --ai-opacity-placeholder: 0.5;
+  --ai-opacity-secondary: 0.6;
+  --ai-opacity-full: 1;
+
+  /* Z-Index Scale */
+  --ai-z-base: 0;
+  --ai-z-raised: 1;
+  --ai-z-dropdown: 100;
+  --ai-z-sticky: 200;
+  --ai-z-overlay: 300;
+  --ai-z-modal: 400;
+  --ai-z-toast: 500;
+}
+
+/* Dark Theme Colors (default) */
+:root,
+.vs-dark,
+.hc-black {
+  --ai-surface-base: #1e1e2e;
+  --ai-surface-raised: #252536;
+  --ai-surface-overlay: #2a2a3c;
+  --ai-surface-sunken: #171723;
+  --ai-onsurface-primary: #e0e0e8;
+  --ai-onsurface-secondary: #8888a0;
+  --ai-onsurface-disabled: #555568;
+  --ai-border-default: rgba(255,255,255,0.08);
+  --ai-border-hover: rgba(255,255,255,0.15);
+  --ai-border-focus: #6c8cff;
+  --ai-accent-default: #6c8cff;
+  --ai-accent-hover: #8aa4ff;
+  --ai-accent-muted: rgba(108,140,255,0.15);
+  --ai-status-success: #4ade80;
+  --ai-status-warning: #fbbf24;
+  --ai-status-error: #f87171;
+  --ai-status-info: #60a5fa;
+}
+
+/* Light Theme Colors */
+.vs {
+  --ai-surface-base: #ffffff;
+  --ai-surface-raised: #f5f5f7;
+  --ai-surface-overlay: #ebebef;
+  --ai-surface-sunken: #f0f0f4;
+  --ai-onsurface-primary: #1a1a2e;
+  --ai-onsurface-secondary: #666680;
+  --ai-onsurface-disabled: #9999aa;
+  --ai-border-default: rgba(0,0,0,0.1);
+  --ai-border-hover: rgba(0,0,0,0.18);
+  --ai-border-focus: #4a6cff;
+  --ai-accent-default: #4a6cff;
+  --ai-accent-hover: #3654e0;
+  --ai-accent-muted: rgba(74,108,255,0.1);
+  --ai-status-success: #16a34a;
+  --ai-status-warning: #d97706;
+  --ai-status-error: #dc2626;
+  --ai-status-info: #2563eb;
+}
+
+/* Deep Blue Theme */
+.vs-dark.ai-theme-deepblue {
+  --ai-surface-base: #0a0e27;
+  --ai-surface-raised: #111638;
+  --ai-surface-overlay: #161c45;
+  --ai-surface-sunken: #070a1c;
+  --ai-onsurface-primary: #c8d4ff;
+  --ai-onsurface-secondary: #6878b8;
+  --ai-onsurface-disabled: #3a4480;
+  --ai-border-default: rgba(100,130,255,0.12);
+  --ai-border-hover: rgba(100,130,255,0.22);
+  --ai-border-focus: #6c8cff;
+  --ai-accent-default: #6c8cff;
+  --ai-accent-hover: #8aa4ff;
+  --ai-accent-muted: rgba(108,140,255,0.2);
+}
