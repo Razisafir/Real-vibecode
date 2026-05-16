@@ -4,6 +4,7 @@
  *
  *  aiExecution.contribution.ts — Service registration + integration hooks.
  *  Phase 10: Adds System Stabilization service with correct dependency order.
+ *  Phase 11: Adds Execution Replay Engine service.
  *
  *  Full Registration Order:
  *    1. IObservabilityService (no AI kernel deps)
@@ -23,6 +24,7 @@
  *    15. IGlobalExecutionBrainService (deps: Execution, Graph, State, Observability, Agent, Process, Context)
  *    16. IBrainDashboardService (deps: Brain, Agent, Process, Graph, Observability, Context, State)
  *    17. ISystemStabilizationService (deps: Brain, Agent, Process, Graph, Context, Observability, State)
+ *    18. IExecutionReplayService (deps: Brain, Agent, Process, Graph, Context, Observability, State, Stabilization, Execution)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -81,6 +83,10 @@ import { BrainDashboardService } from './brainDashboardService.js';
 import { ISystemStabilizationService } from '../common/systemStabilization.js';
 import { SystemStabilizationService } from './systemStabilizationService.js';
 
+// Phase 11 imports
+import { IExecutionReplayService } from '../common/replayEngine.js';
+import { ReplayEngineService } from './replayEngineService.js';
+
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
 // ORDER MATTERS: Services are registered in dependency order.
@@ -137,6 +143,9 @@ registerSingleton(IBrainDashboardService, BrainDashboardService, InstantiationTy
 
 // Phase 10.17: SystemStabilizationService (deps: Brain, Agent, Process, Graph, Context, Observability, State)
 registerSingleton(ISystemStabilizationService, SystemStabilizationService, InstantiationType.Delayed);
+
+// Phase 11.18: ReplayEngineService (deps: Brain, Agent, Process, Graph, Context, Observability, State, Stabilization, Execution)
+registerSingleton(IExecutionReplayService, ReplayEngineService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
