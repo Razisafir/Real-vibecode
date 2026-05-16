@@ -1,9 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel — Phase 18 System Stress Test & Real-World Simulation
+ *  AI Execution Kernel — Phase 19 Architectural Consolidation & Production Hardening
  *  Real Vibecode — AI-Native IDE
  *
  *  aiExecution.contribution.ts — Service registration + integration hooks.
- *  Phase 18: Adds System Stress & Validation services (10 new singletons).
+ *  Phase 19: Adds Architectural Consolidation services (10 new singletons).
  *
  *  Full Registration Order:
  *    1. IExecutionGraphService (no AI kernel deps)
@@ -85,6 +85,16 @@
  *    77. IMemoryConsistencyAuditService (no AI kernel deps — memory audit)
  *    78. ISystemBoundaryDiscoveryService (no AI kernel deps — boundary discovery)
  *    79. ISystemConsolidationService (no AI kernel deps — consolidation)
+ *    80. IServiceConsolidationEngineService (no AI kernel deps -- service consolidation)
+ *    81. IDependencyGraphSimplificationService (no AI kernel deps -- dependency simplification)
+ *    82. IServiceBoundaryClarificationService (no AI kernel deps -- boundary clarification)
+ *    83. ISystemModuleGroupingService (no AI kernel deps -- module grouping)
+ *    84. IRedundancyEliminationService (no AI kernel deps -- redundancy elimination)
+ *    85. ISimplifiedOrchestrationService (no AI kernel deps -- orchestration simplification)
+ *    86. IPublicAPISimplificationService (no AI kernel deps -- API simplification)
+ *    87. IComplexityMetricsService (no AI kernel deps -- complexity metrics)
+ *    88. ISafeMigrationStrategyService (no AI kernel deps -- migration strategy)
+ *    89. IFinalArchitectureModelService (no AI kernel deps -- final architecture model)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -174,6 +184,10 @@ import { SystemCoherenceEngineService, CrossLayerSignalBusService, SystemIntentA
 // Phase 18 imports
 import { ISystemStressSimulationService, ISystemDegradationModelService, ICrossLayerFailureInjectionService, ISystemSelfHealingValidationService, IRealWorldWorkflowSimulationService, ISystemStabilityScoringService, IEventStormSimulationService, IMemoryConsistencyAuditService, ISystemBoundaryDiscoveryService, ISystemConsolidationService } from '../common/systemStress.js';
 import { SystemStressSimulationService, SystemDegradationModelService, CrossLayerFailureInjectionService, SystemSelfHealingValidationService, RealWorldWorkflowSimulationService, SystemStabilityScoringService, EventStormSimulationService, MemoryConsistencyAuditService, SystemBoundaryDiscoveryService, SystemConsolidationService } from './systemStressService.js';
+
+// Phase 19 imports
+import { IServiceConsolidationEngineService, IDependencyGraphSimplificationService, IServiceBoundaryClarificationService, ISystemModuleGroupingService, IRedundancyEliminationService, ISimplifiedOrchestrationService, IPublicAPISimplificationService, IComplexityMetricsService, ISafeMigrationStrategyService, IFinalArchitectureModelService } from '../common/systemConsolidation.js';
+import { ServiceConsolidationEngineService, DependencyGraphSimplificationService, ServiceBoundaryClarificationService, SystemModuleGroupingService, RedundancyEliminationService, SimplifiedOrchestrationService, PublicAPISimplificationService, ComplexityMetricsService, SafeMigrationStrategyService, FinalArchitectureModelService } from './systemConsolidationService.js';
 
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
@@ -417,6 +431,36 @@ registerSingleton(ISystemBoundaryDiscoveryService, SystemBoundaryDiscoveryServic
 
 // Phase 18.79: SystemConsolidationService (no AI kernel deps — consolidation)
 registerSingleton(ISystemConsolidationService, SystemConsolidationService, InstantiationType.Delayed);
+
+// Phase 19.80: ServiceConsolidationEngineService (no AI kernel deps -- service consolidation)
+registerSingleton(IServiceConsolidationEngineService, ServiceConsolidationEngineService, InstantiationType.Delayed);
+
+// Phase 19.81: DependencyGraphSimplificationService (no AI kernel deps -- dependency simplification)
+registerSingleton(IDependencyGraphSimplificationService, DependencyGraphSimplificationService, InstantiationType.Delayed);
+
+// Phase 19.82: ServiceBoundaryClarificationService (no AI kernel deps -- boundary clarification)
+registerSingleton(IServiceBoundaryClarificationService, ServiceBoundaryClarificationService, InstantiationType.Delayed);
+
+// Phase 19.83: SystemModuleGroupingService (no AI kernel deps -- module grouping)
+registerSingleton(ISystemModuleGroupingService, SystemModuleGroupingService, InstantiationType.Delayed);
+
+// Phase 19.84: RedundancyEliminationService (no AI kernel deps -- redundancy elimination)
+registerSingleton(IRedundancyEliminationService, RedundancyEliminationService, InstantiationType.Delayed);
+
+// Phase 19.85: SimplifiedOrchestrationService (no AI kernel deps -- orchestration simplification)
+registerSingleton(ISimplifiedOrchestrationService, SimplifiedOrchestrationService, InstantiationType.Delayed);
+
+// Phase 19.86: PublicAPISimplificationService (no AI kernel deps -- API simplification)
+registerSingleton(IPublicAPISimplificationService, PublicAPISimplificationService, InstantiationType.Delayed);
+
+// Phase 19.87: ComplexityMetricsService (no AI kernel deps -- complexity metrics)
+registerSingleton(IComplexityMetricsService, ComplexityMetricsService, InstantiationType.Delayed);
+
+// Phase 19.88: SafeMigrationStrategyService (no AI kernel deps -- migration strategy)
+registerSingleton(ISafeMigrationStrategyService, SafeMigrationStrategyService, InstantiationType.Delayed);
+
+// Phase 19.89: FinalArchitectureModelService (no AI kernel deps -- final architecture model)
+registerSingleton(IFinalArchitectureModelService, FinalArchitectureModelService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
