@@ -3,7 +3,7 @@
  *  Real Vibecode -- AI-Native IDE
  *
  *  aiExecution.contribution.ts -- Service registration + integration hooks.
- *  Phase 21: Adds Runtime Execution services (10 new singletons #100-109).
+ *  Phase 22: Adds Reality Validation services (10 new singletons #110-119).
  *
  *  Full Registration Order:
  *    1. IExecutionGraphService (no AI kernel deps)
@@ -115,6 +115,16 @@
  *   107. IDistributedExecutionBridgeService (no AI kernel deps -- distributed execution bridge)
  *   108. IRuntimeGovernanceService (no AI kernel deps -- runtime governance)
  *   109. IAutonomousEvolutionRuntimeService (no AI kernel deps -- autonomous evolution runtime)
+ *   110. IRealityValidationService (no AI kernel deps -- reality validation)
+ *   111. IExecutionTruthAuditService (no AI kernel deps -- execution truth audit)
+ *   112. IMaintainabilityAnalysisService (no AI kernel deps -- maintainability analysis)
+ *   113. IScalabilityRealityService (no AI kernel deps -- scalability reality)
+ *   114. IOperationalTruthService (no AI kernel deps -- operational truth)
+ *   115. IObservabilityCompletenessService (no AI kernel deps -- observability completeness)
+ *   116. IArchitecturalReductionService (no AI kernel deps -- architectural reduction)
+ *   117. IProductionReadinessTruthService (no AI kernel deps -- production readiness truth)
+ *   118. IRuntimeRealityBenchmarkService (no AI kernel deps -- runtime reality benchmark)
+ *   119. ISystemConvergenceReportService (no AI kernel deps -- system convergence report)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -216,6 +226,10 @@ import { ProductionDeploymentService, SecurityBoundaryService, UpdateLifecycleSe
 // Phase 21 imports
 import { IRuntimeKernelService, IExecutionSchedulerService, IAgentOrchestrationRuntimeService, IRuntimePersistenceService, IRuntimeHealthSupervisorService, IRuntimeRecoveryOrchestratorService, IResourceGovernanceService, IDistributedExecutionBridgeService, IRuntimeGovernanceService, IAutonomousEvolutionRuntimeService } from '../common/runtimeExecution.js';
 import { RuntimeKernelService, ExecutionSchedulerService, AgentOrchestrationRuntimeService, RuntimePersistenceService, RuntimeHealthSupervisorService, RuntimeRecoveryOrchestratorService, ResourceGovernanceService, DistributedExecutionBridgeService, RuntimeGovernanceService, AutonomousEvolutionRuntimeService } from './runtimeExecutionService.js';
+
+// Phase 22 imports
+import { IRealityValidationService, IExecutionTruthAuditService, IMaintainabilityAnalysisService, IScalabilityRealityService, IOperationalTruthService, IObservabilityCompletenessService, IArchitecturalReductionService, IProductionReadinessTruthService, IRuntimeRealityBenchmarkService, ISystemConvergenceReportService } from '../common/realityValidation.js';
+import { RealityValidationService, ExecutionTruthAuditService, MaintainabilityAnalysisService, ScalabilityRealityService, OperationalTruthService, ObservabilityCompletenessService, ArchitecturalReductionService, ProductionReadinessTruthService, RuntimeRealityBenchmarkService, SystemConvergenceReportService } from './realityValidationService.js';
 
 // ─── Singleton Registrations ───────────────────────────────────────────────────
 //
@@ -549,6 +563,36 @@ registerSingleton(IRuntimeGovernanceService, RuntimeGovernanceService, Instantia
 
 // Phase 21.109: AutonomousEvolutionRuntimeService (no AI kernel deps -- autonomous evolution runtime)
 registerSingleton(IAutonomousEvolutionRuntimeService, AutonomousEvolutionRuntimeService, InstantiationType.Delayed);
+
+// Phase 22.110: RealityValidationService (no AI kernel deps -- reality validation)
+registerSingleton(IRealityValidationService, RealityValidationService, InstantiationType.Delayed);
+
+// Phase 22.111: ExecutionTruthAuditService (no AI kernel deps -- execution truth audit)
+registerSingleton(IExecutionTruthAuditService, ExecutionTruthAuditService, InstantiationType.Delayed);
+
+// Phase 22.112: MaintainabilityAnalysisService (no AI kernel deps -- maintainability analysis)
+registerSingleton(IMaintainabilityAnalysisService, MaintainabilityAnalysisService, InstantiationType.Delayed);
+
+// Phase 22.113: ScalabilityRealityService (no AI kernel deps -- scalability reality)
+registerSingleton(IScalabilityRealityService, ScalabilityRealityService, InstantiationType.Delayed);
+
+// Phase 22.114: OperationalTruthService (no AI kernel deps -- operational truth)
+registerSingleton(IOperationalTruthService, OperationalTruthService, InstantiationType.Delayed);
+
+// Phase 22.115: ObservabilityCompletenessService (no AI kernel deps -- observability completeness)
+registerSingleton(IObservabilityCompletenessService, ObservabilityCompletenessService, InstantiationType.Delayed);
+
+// Phase 22.116: ArchitecturalReductionService (no AI kernel deps -- architectural reduction)
+registerSingleton(IArchitecturalReductionService, ArchitecturalReductionService, InstantiationType.Delayed);
+
+// Phase 22.117: ProductionReadinessTruthService (no AI kernel deps -- production readiness truth)
+registerSingleton(IProductionReadinessTruthService, ProductionReadinessTruthService, InstantiationType.Delayed);
+
+// Phase 22.118: RuntimeRealityBenchmarkService (no AI kernel deps -- runtime reality benchmark)
+registerSingleton(IRuntimeRealityBenchmarkService, RuntimeRealityBenchmarkService, InstantiationType.Delayed);
+
+// Phase 22.119: SystemConvergenceReportService (no AI kernel deps -- system convergence report)
+registerSingleton(ISystemConvergenceReportService, SystemConvergenceReportService, InstantiationType.Delayed);
 
 // ─── Bootstrap Runner ──────────────────────────────────────────────────────────
 
