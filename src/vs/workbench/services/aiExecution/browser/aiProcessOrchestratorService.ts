@@ -118,7 +118,7 @@ class ProcessSessionImpl implements IProcessSession {
 // ─── Service Implementation ───────────────────────────────────────────────────
 
 export class AIProcessOrchestratorService extends Disposable implements IAIProcessOrchestratorService {
-        readonly _serviceBrand: undefined;
+        declare readonly _serviceBrand: undefined;
 
         // ─── State ────────────────────────────────────────────────────────────────
 

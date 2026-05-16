@@ -6,12 +6,12 @@
  *  Phase 16: Adds Human Workflow services (10 new singletons).
  *
  *  Full Registration Order:
- *    1. IObservabilityService (no AI kernel deps)
- *    2. IExecutionGraphService
- *    3. IAIUnifiedStateService (deps: ExecutionGraphService)
+ *    1. IExecutionGraphService (no AI kernel deps)
+ *    2. IAIUnifiedStateService (deps: ExecutionGraphService)
+ *    3. IObservabilityService (deps: ExecutionGraphService, UnifiedStateService)
  *    4. IAIExecutionService (deps: Graph, UnifiedState, Observability)
- *    5. IAIExecutionUIService (deps: UnifiedState, Graph, Editor)
- *    6. IWorkspaceBootstrapService (deps: UnifiedState, Graph, Execution)
+ *    5. IAIExecutionUIService
+ *    6. IWorkspaceBootstrapService
  *    7. ISymbolDependencyAnalyzer (deps: TextFileService)
  *    8. IAIContextService (deps: EditorService, WorkspaceContext, TextFile, Graph)
  *    9. IContextPersistenceService (deps: ContextService, FileService)
@@ -153,22 +153,22 @@ import { WorkflowMomentumService, InterruptionIntelligenceService, SessionContin
 // A service can only depend on services registered BEFORE it.
 //
 
-// Phase 5.1: ObservabilityService (leaf dependency — no AI kernel deps)
-registerSingleton(IObservabilityService, ObservabilityService, InstantiationType.Delayed);
-
-// Phase 5.2: ExecutionGraphService
+// Phase 5.1: ExecutionGraphService (no AI kernel deps)
 registerSingleton(IExecutionGraphService, ExecutionGraphService, InstantiationType.Delayed);
 
-// Phase 5.3: UnifiedStateService (deps: GraphService)
+// Phase 5.2: UnifiedStateService (deps: ExecutionGraphService)
 registerSingleton(IAIUnifiedStateService, AIUnifiedStateService, InstantiationType.Delayed);
+
+// Phase 5.3: ObservabilityService (deps: ExecutionGraphService, UnifiedStateService)
+registerSingleton(IObservabilityService, ObservabilityService, InstantiationType.Delayed);
 
 // Phase 5.4: AIExecutionService (deps: Graph, UnifiedState, Observability)
 registerSingleton(IAIExecutionService, AIExecutionService, InstantiationType.Delayed);
 
-// Phase 5.5: AIExecutionUIService (deps: Graph, UnifiedState, Editor)
+// Phase 5.5: AIExecutionUIService
 registerSingleton(IAIExecutionUIService, AIExecutionUIService, InstantiationType.Delayed);
 
-// Phase 5.6: WorkspaceBootstrapService (deps: UnifiedState, Graph, Execution)
+// Phase 5.6: WorkspaceBootstrapService
 registerSingleton(IWorkspaceBootstrapService, WorkspaceBootstrapService, InstantiationType.Delayed);
 
 // Phase 6.7: SymbolDependencyAnalyzer (deps: TextFileService)
