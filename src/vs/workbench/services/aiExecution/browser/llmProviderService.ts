@@ -32,6 +32,7 @@ import {
         FallbackChainConfig, FallbackBehavior, ProviderStatusChangeEvent, StreamChunkEvent,
         KNOWN_PROVIDER_CONFIGS, KNOWN_MODELS,
 } from '../common/llmProvider.js';
+import { ICostGovernorService, CostRecord } from '../common/costGovernor.js';
 
 // =====================================================================
 // #140: LLM Provider Service
@@ -64,6 +65,7 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                 @ILogService private readonly logService: ILogService,
                 @ICredentialStoreService private readonly credentialStore: ICredentialStoreService,
                 @IProviderHealthService private readonly healthService: IProviderHealthService,
+                @ICostGovernorService private readonly costGovernor: ICostGovernorService,
         ) {
                 super();
 
@@ -121,6 +123,13 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                         throw new Error(`[LLMProvider] Unknown provider: ${providerId}`);
                 }
 
+                // Phase 30: Check budget BEFORE making the API call
+                const estimatedTokens = request.maxTokens || 4096;
+                if (!this.costGovernor.isCallAllowed(estimatedTokens)) {
+                        const snapshot = this.costGovernor.getBudgetSnapshot();
+                        throw new Error(`[LLMProvider] Budget exceeded: tokens=${snapshot.tokensUsed}/${snapshot.tokenCeiling}, cost=$${snapshot.costUsed.toFixed(4)}/$${snapshot.costCeiling.toFixed(2)}. Emergency stop: ${this.costGovernor.isEmergencyStopped()}`);
+                }
+
                 const cts = new CancellationTokenSource();
                 this._cancellationSources.set(request.requestId, cts);
                 this._activeRequests.add(request.requestId);
@@ -139,10 +148,28 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                         const response = await this.executeProviderRequest(config, request, apiKey || '', cts.token);
                         const latencyMs = Date.now() - startTime;
 
+                        // Phase 30: Record actual cost AFTER receiving the response
+                        const inputTokens = response.usage.promptTokens;
+                        const outputTokens = response.usage.completionTokens;
+                        const totalTokens = response.usage.totalTokens;
+                        const inputCost = (inputTokens / 1_000_000) * config.pricingPerMillionInput;
+                        const outputCost = (outputTokens / 1_000_000) * config.pricingPerMillionOutput;
+                        const totalCost = inputCost + outputCost;
+                        this.costGovernor.recordCost({
+                                requestId: request.requestId,
+                                providerId,
+                                model: request.model,
+                                inputTokens,
+                                outputTokens,
+                                costUSD: totalCost,
+                                timestamp: Date.now(),
+                                durationMs: latencyMs,
+                        });
+
                         this.healthService.recordSuccess(providerId, latencyMs);
 
                         this._onRequestCompleted.fire(request.requestId);
-                        this.logService.info(`[LLMProvider] Request ${request.requestId} completed in ${latencyMs}ms`);
+                        this.logService.info(`[LLMProvider] Request ${request.requestId} completed in ${latencyMs}ms, tokens: ${totalTokens}, cost: $${totalCost.toFixed(6)}`);
 
                         return response;
                 } catch (error: any) {
@@ -168,6 +195,12 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                 for (const providerId of chain.providers) {
                         if (Date.now() - startTime > chain.failOpenAfterMs) {
                                 throw new Error(`[LLMProvider] Fallback chain timed out after ${chain.failOpenAfterMs}ms`);
+                        }
+
+                        // Phase 30: Check budget before each provider attempt
+                        if (!this.costGovernor.isCallAllowed(request.maxTokens || 4096)) {
+                                this.logService.warn(`[LLMProvider] Budget exceeded, skipping provider: ${providerId}`);
+                                continue;
                         }
 
                         // Check if we should avoid this provider based on health

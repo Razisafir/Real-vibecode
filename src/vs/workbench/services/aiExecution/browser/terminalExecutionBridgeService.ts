@@ -1,10 +1,16 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel -- Phase 28 Terminal Execution Bridge Service
+ *  AI Execution Kernel -- Phase 30: Terminal Execution Bridge Service
  *  Real Vibecode -- AI-Native IDE
  *
- *  TerminalExecutionBridgeService -- THE MOST CRITICAL FILE IN PHASE 28.
+ *  TerminalExecutionBridgeService -- THE MOST CRITICAL FILE IN THE EXECUTION STACK.
  *  Implements REAL command execution through VS Code's terminal with output
  *  capture via the file redirect pattern.
+ *
+ *  Phase 30 changes:
+ *    - Wired ITerminalSessionManagerService for session lifecycle tracking
+ *    - Wired IStreamingOutputService for incremental output reading
+ *    - Wired ICommandSafetyService for command safety analysis
+ *    - Removed redundant local safety checks (replaced by CommandSafetyService)
  *
  *  STRATEGY: Output File Redirect
  *
@@ -24,7 +30,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ITerminalExecutionBridgeService, ExecutionMode, CommandSpec, ExecutionResult, CommandHistoryEntry } from '../common/terminalExecutionBridge.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import { ITerminalSessionManagerService, SessionState } from '../common/terminalSessionManager.js';
+import { IStreamingOutputService } from '../common/streamingOutput.js';
+import { ICommandSafetyService, CommandRisk } from '../common/commandSafety.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
@@ -57,6 +65,9 @@ export class TerminalExecutionBridgeService extends Disposable implements ITermi
 		@ILogService private readonly logService: ILogService,
 		@IStorageService private readonly storageService: IStorageService,
 		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
+		@ITerminalSessionManagerService private readonly sessionManager: ITerminalSessionManagerService,
+		@IStreamingOutputService private readonly streamingOutput: IStreamingOutputService,
+		@ICommandSafetyService private readonly commandSafety: ICommandSafetyService,
 	) {
 		super();
 		this._loadHistory();
@@ -69,9 +80,43 @@ export class TerminalExecutionBridgeService extends Disposable implements ITermi
 		const commandId = `cmd-${++this._commandCounter}`;
 		const startTime = Date.now();
 
+		// Phase 30: Analyze command safety BEFORE execution
+		const safetyResult = this.commandSafety.analyzeCommand(spec.command);
+		if (!safetyResult.allowed) {
+			this.logService.warn(`[TerminalBridge] Command blocked by safety engine: ${spec.command} - ${safetyResult.blockReason}`);
+			return {
+				success: false,
+				exitCode: -1,
+				stdout: '',
+				stderr: `Command blocked: ${safetyResult.blockReason}. Safe alternative: ${safetyResult.safeAlternative || 'none'}`,
+				duration: 0,
+				timedOut: false,
+				command: spec.command,
+				timestamp: startTime,
+				mode: ExecutionMode.FileRedirect,
+			};
+		}
+		if (safetyResult.risk === CommandRisk.HighRisk) {
+			this.logService.warn(`[TerminalBridge] High-risk command proceeding: ${spec.command}`);
+		}
+
 		this._activeCommands.set(commandId, { spec, startedAt: startTime });
 		this._emitEvent(ExecutionEventType.CommandStarted, { commandId, command: spec.command, cwd: spec.cwd });
 		this.logService.info(`[TerminalBridge] Executing: ${spec.command} in ${spec.cwd}`);
+
+		// Phase 30: Create and start a session for lifecycle tracking
+		const outputFilePath = this._getOutputFilePath(commandId);
+		const session = this.sessionManager.createSession(
+			spec.command,
+			spec.cwd,
+			outputFilePath,
+			'terminal-bridge',
+			spec.timeout || 30000
+		);
+		this.sessionManager.startSession(session.id);
+
+		// Phase 30: Register a streaming output stream
+		this.streamingOutput.registerStream(session.id, outputFilePath);
 
 		try {
 			const result = await this._executeWithFileRedirect(spec, commandId);
@@ -89,6 +134,17 @@ export class TerminalExecutionBridgeService extends Disposable implements ITermi
 				mode: ExecutionMode.FileRedirect,
 			};
 
+			// Phase 30: Complete the session and stream
+			if (result.exitCode === 0) {
+				this.sessionManager.completeSession(session.id, SessionState.Completed, result.exitCode);
+			} else if (result.timedOut) {
+				this.sessionManager.completeSession(session.id, SessionState.TimedOut, result.exitCode);
+			} else {
+				this.sessionManager.completeSession(session.id, SessionState.Failed, result.exitCode);
+			}
+			await this.streamingOutput.markComplete(session.id);
+			this.streamingOutput.unregisterStream(session.id);
+
 			this._recordHistory(spec, execResult);
 			this._activeCommands.delete(commandId);
 
@@ -102,6 +158,10 @@ export class TerminalExecutionBridgeService extends Disposable implements ITermi
 		} catch (err: any) {
 			const duration = Date.now() - startTime;
 			this._activeCommands.delete(commandId);
+
+			// Phase 30: Mark session as failed on error
+			this.sessionManager.completeSession(session.id, SessionState.Failed, -1);
+			this.streamingOutput.unregisterStream(session.id);
 
 			const execResult: ExecutionResult = {
 				success: false,
@@ -145,6 +205,14 @@ export class TerminalExecutionBridgeService extends Disposable implements ITermi
 	getActiveProcessCount(): number { return this._activeCommands.size; }
 
 	// -- Private: File redirect execution -- -----------------------------------
+
+	private _getOutputFilePath(commandId: string): string {
+		const workspace = this.workspaceContextService.getWorkspace();
+		const rootUri = workspace.folders[0]?.uri;
+		if (!rootUri) { return `${OUTPUT_DIR}/${commandId}.log`; }
+		const outputUri = URI.joinPath(rootUri, OUTPUT_DIR, `${commandId}.log`);
+		return outputUri.fsPath;
+	}
 
 	private async _executeWithFileRedirect(spec: CommandSpec, commandId: string): Promise<{ stdout: string; stderr: string; exitCode: number; timedOut: boolean }> {
 		const workspace = this.workspaceContextService.getWorkspace();
@@ -213,6 +281,12 @@ export class TerminalExecutionBridgeService extends Disposable implements ITermi
 			try {
 				const stat = await this.fileService.stat(uri);
 				if (stat.size > 0) {
+					// Phase 30: Update session heartbeat on each successful read
+					const session = this.sessionManager.getSessionByOutputFile(uri.fsPath);
+					if (session) {
+						this.sessionManager.updateHeartbeat(session.id, stat.size, false);
+					}
+
 					// Check if file size is stable (command finished writing)
 					if (stat.size === lastSize) {
 						stableCount++;
@@ -224,12 +298,22 @@ export class TerminalExecutionBridgeService extends Disposable implements ITermi
 							const content = await this.fileService.readFile(uri);
 							const text = content.value.toString();
 							if (text.includes(EXIT_MARKER)) {
+								// Phase 30: Mark exit marker found in heartbeat
+								if (session) {
+									this.sessionManager.updateHeartbeat(session.id, stat.size, true);
+								}
 								return text;
 							}
 						}
 					} else {
 						stableCount = 0;
 						lastSize = stat.size;
+					}
+
+					// Phase 30: Read incremental output via streaming service
+					const session = this.sessionManager.getSessionByOutputFile(uri.fsPath);
+					if (session && stableCount === 0) {
+						await this.streamingOutput.readIncremental(session.id);
 					}
 
 					// Emit live output events for partial reads
@@ -241,6 +325,12 @@ export class TerminalExecutionBridgeService extends Disposable implements ITermi
 			} catch { /* File doesn't exist yet */ }
 
 			await new Promise(resolve => setTimeout(resolve, pollInterval));
+		}
+
+		// Phase 30: Mark session as stuck on timeout
+		const session = this.sessionManager.getSessionByOutputFile(uri.fsPath);
+		if (session) {
+			this.sessionManager.markStuck(session.id);
 		}
 
 		// Timeout - try to read whatever output we have so far

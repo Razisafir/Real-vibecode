@@ -1,39 +1,29 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel -- Phase 29: Terminal Reality, Safety Hardening & True Execution Reliability
+ *  AI Execution Kernel -- Phase 30: Integration, DI Fix & Deterministic Execution
  *  Real Vibecode -- AI-Native IDE
  *
  *  aiExecution.contribution.ts -- Service registration + real UI wiring.
  *
- *  PHASE 29 REDUCTION: From 9 to 7 registered singletons.
+ *  PHASE 30: ALL services that are injected via DI MUST be registered here.
+ *  No fictional absorption. No dead side-effect imports. Every registered
+ *  singleton has its constructor dependencies also registered.
  *
- *  MERGED IN PHASE 29 (8 services removed as separate singletons):
- *    - Observability: Absorbed by AutonomousExecutionLoopService
- *    - GitWorkflow: Absorbed by AutonomousExecutionLoopService
- *    - CodeEditing: Absorbed by TransactionalEditService
- *    - RepositoryIntelligence: Absorbed by ProjectMemoryService
- *    - RealUIIntegration: Absorbed by ProjectMemoryService
- *    - ExecutionLock: Absorbed by TransactionalEditService
- *    - StreamingOutput: Absorbed by TerminalSessionManagerService
- *    - CommandSafety: Absorbed by TerminalExecutionBridgeService
+ *  ACTIVE SINGLETONS (15):
+ *    EXECUTION (3):  AutonomousExecutionLoop, TerminalExecutionBridge, TerminalSessionManager
+ *    EDITING (1):    TransactionalEdit
+ *    LLM (4):        LLMProvider, ModelRegistry, CredentialStore, ProviderHealth
+ *    MEMORY (1):     ProjectMemory
+ *    SAFETY (4):     CostGovernor, ExecutionLock, CommandSafety, ExecutionSanity
+ *    REPAIR (1):     RepairIntelligence
+ *    INTELLIGENCE (1): StreamingOutput
  *
- *  NEW IN PHASE 29 (4 services as singletons):
- *    - TerminalSessionManagerService: Session lifecycle tracking
- *    - TransactionalEditService: Atomic edit batches with rollback
- *    - RepairIntelligenceService: Iterative repair improvement with learning
- *    - ExecutionSanityService: Detect and prevent hallucinated success
- *    - CostGovernorService: Hard cost enforcement for LLM API usage
+ *  RE-REGISTERED (absorption was fictional; these are still injected):
+ *    GitWorkflow (injected by AutonomousExecutionLoop, not absorbed)
+ *    RepositoryIntelligence (injected by AutonomousExecutionLoop, not absorbed)
+ *    CodeEditing (injected by AutonomousExecutionLoop during transition to TransactionalEdit)
  *
- *  ACTIVE SINGLETONS (7):
- *    EXECUTION (3): AutonomousExecutionLoop, TerminalExecutionBridge, TerminalSessionManager
- *    EDITING (1):   TransactionalEdit
- *    LLM (1):       LLMProvider
- *    MEMORY (1):    ProjectMemory
- *    SAFETY (1):    CostGovernor
- *
- *  SIDE-EFFECT IMPORTS (non-singleton services loaded for module effects):
- *    - All Phase 29 browser services that are absorbed by singletons
- *    - Legacy services from prior phases (kept for module loading compatibility)
- *    - aiProductContribution.ts (auto-registers as workbench contribution)
+ *  REMOVED: IObservabilityService (was injected but never used in any method body)
+ *  REMOVED: All dead side-effect imports that served no DI purpose
  *--------------------------------------------------------------------------------------------*/
 
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
@@ -50,53 +40,47 @@ import { TerminalSessionManagerService } from './terminalSessionManagerService.j
 import { ITransactionalEditService } from '../common/transactionalEdit.js';
 import { TransactionalEditService } from './transactionalEditService.js';
 
-// ---- LLM (1) ----
-import { ILLMProviderService } from '../common/llmProvider.js';
-import { LLMProviderService } from './llmProviderService.js';
+// ---- LLM (4) ----
+import { ILLMProviderService, IModelRegistryService, ICredentialStoreService, IProviderHealthService } from '../common/llmProvider.js';
+import { LLMProviderService, ModelRegistryService, CredentialStoreService, ProviderHealthService } from './llmProviderService.js';
 
 // ---- MEMORY (1) ----
 import { IProjectMemoryService } from '../common/projectMemory.js';
 import { ProjectMemoryService } from './projectMemoryService.js';
 
-// ---- SAFETY (1) ----
+// ---- SAFETY (4) ----
 import { ICostGovernorService } from '../common/costGovernor.js';
 import { CostGovernorService } from './costGovernorService.js';
+import { IExecutionLockService } from '../common/executionLock.js';
+import { ExecutionLockService } from './executionLockService.js';
+import { ICommandSafetyService } from '../common/commandSafety.js';
+import { CommandSafetyService } from './commandSafetyService.js';
+import { IExecutionSanityService } from '../common/executionSanity.js';
+import { ExecutionSanityService } from './executionSanityService.js';
 
-// ---- Phase 29 services absorbed by singletons (side-effect imports) ----
-import './streamingOutputService.js';
-import './executionLockService.js';
-import './repairIntelligenceService.js';
-import './executionSanityService.js';
-import './commandSafetyService.js';
+// ---- REPAIR (1) ----
+import { IRepairIntelligenceService } from '../common/repairIntelligence.js';
+import { RepairIntelligenceService } from './repairIntelligenceService.js';
 
-// ---- Absorbed Phase 28 services (side-effect imports for module loading) ----
-import './repositoryIntelligenceService.js';
-import './codeEditingService.js';
-import './gitWorkflowService.js';
-import './observabilityService.js';
-import './realUIIntegrationService.js';
+// ---- INTELLIGENCE (1) ----
+import { IStreamingOutputService } from '../common/streamingOutput.js';
+import { StreamingOutputService } from './streamingOutputService.js';
 
-// ---- Legacy services (side-effect imports for module loading compatibility) ----
-import './longHorizonMemoryService.js';
-import './autonomousRepairService.js';
-import './executionVerificationService.js';
-import './multiAgentExecutionService.js';
-import './contextWindowOptimizationService.js';
-import './executionGraphService.js';
-import './aiUnifiedStateService.js';
-import './aiExecutionService.js';
-import './agentOrchestratorService.js';
-import './executionSandboxService.js';
-import './aiContextService.js';
-import './autonomousExecutionService.js';
-import './tokenEstimationService.js';
+// ---- RE-REGISTERED (still injected, absorption was fictional) ----
+import { IGitWorkflowService } from '../common/gitWorkflow.js';
+import { GitWorkflowService } from './gitWorkflowService.js';
+import { IRepositoryIntelligenceService } from '../common/repositoryIntelligence.js';
+import { RepositoryIntelligenceService } from './repositoryIntelligenceService.js';
+import { ICodeEditingService } from '../common/codeEditing.js';
+import { CodeEditingService } from './codeEditingService.js';
 
 // ---- Real UI Product Contribution ----
 import './aiProductContribution.js';
 
 // =====================================================================
 // SINGLETON REGISTRATIONS
-// 7 core singletons + 1 auto-registered workbench contribution
+// 15 core singletons + 3 re-registered + 1 auto-registered workbench contribution
+// Every registered singleton's constructor dependencies are also registered.
 // =====================================================================
 
 // EXECUTION (3)
@@ -107,11 +91,28 @@ registerSingleton(ITerminalSessionManagerService, TerminalSessionManagerService,
 // EDITING (1)
 registerSingleton(ITransactionalEditService, TransactionalEditService, InstantiationType.Delayed);
 
-// LLM (1)
+// LLM (4)
 registerSingleton(ILLMProviderService, LLMProviderService, InstantiationType.Delayed);
+registerSingleton(IModelRegistryService, ModelRegistryService, InstantiationType.Delayed);
+registerSingleton(ICredentialStoreService, CredentialStoreService, InstantiationType.Delayed);
+registerSingleton(IProviderHealthService, ProviderHealthService, InstantiationType.Delayed);
 
 // MEMORY (1)
 registerSingleton(IProjectMemoryService, ProjectMemoryService, InstantiationType.Delayed);
 
-// SAFETY (1)
+// SAFETY (4)
 registerSingleton(ICostGovernorService, CostGovernorService, InstantiationType.Delayed);
+registerSingleton(IExecutionLockService, ExecutionLockService, InstantiationType.Delayed);
+registerSingleton(ICommandSafetyService, CommandSafetyService, InstantiationType.Delayed);
+registerSingleton(IExecutionSanityService, ExecutionSanityService, InstantiationType.Delayed);
+
+// REPAIR (1)
+registerSingleton(IRepairIntelligenceService, RepairIntelligenceService, InstantiationType.Delayed);
+
+// INTELLIGENCE (1)
+registerSingleton(IStreamingOutputService, StreamingOutputService, InstantiationType.Delayed);
+
+// RE-REGISTERED (absorption was fictional; these are still injected by consumers)
+registerSingleton(IGitWorkflowService, GitWorkflowService, InstantiationType.Delayed);
+registerSingleton(IRepositoryIntelligenceService, RepositoryIntelligenceService, InstantiationType.Delayed);
+registerSingleton(ICodeEditingService, CodeEditingService, InstantiationType.Delayed);
