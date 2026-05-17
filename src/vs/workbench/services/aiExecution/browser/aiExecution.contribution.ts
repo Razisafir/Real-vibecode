@@ -1,40 +1,54 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel -- Real Execution Bridge, Terminal Control & True Autonomous Loop
+ *  AI Execution Kernel -- Phase 29: Terminal Reality, Safety Hardening & True Execution Reliability
  *  Real Vibecode -- AI-Native IDE
  *
  *  aiExecution.contribution.ts -- Service registration + real UI wiring.
  *
- *  PHASE 28 REDUCTION: From 14 to 9 registered singletons.
+ *  PHASE 29 REDUCTION: From 9 to 7 registered singletons.
  *
- *  MERGED IN PHASE 28 (6 services removed as separate singletons):
- *    - ExecutionGraph: Absorbed by AutonomousExecutionLoopService
- *    - AIUnifiedState: Absorbed by ProjectMemoryService
- *    - AIExecution: Absorbed by AutonomousExecutionLoopService
- *    - AgentOrchestrator: Absorbed by AutonomousExecutionLoopService
- *    - ExecutionSandbox: Absorbed by AutonomousExecutionLoopService
- *    - AIContext: Absorbed by ProjectMemoryService
+ *  MERGED IN PHASE 29 (8 services removed as separate singletons):
+ *    - Observability: Absorbed by AutonomousExecutionLoopService
+ *    - GitWorkflow: Absorbed by AutonomousExecutionLoopService
+ *    - CodeEditing: Absorbed by TransactionalEditService
+ *    - RepositoryIntelligence: Absorbed by ProjectMemoryService
+ *    - RealUIIntegration: Absorbed by ProjectMemoryService
+ *    - ExecutionLock: Absorbed by TransactionalEditService
+ *    - StreamingOutput: Absorbed by TerminalSessionManagerService
+ *    - CommandSafety: Absorbed by TerminalExecutionBridgeService
  *
- *  NEW IN PHASE 28 (2 services):
- *    - TerminalExecutionBridgeService: Real command execution via VS Code terminal
- *    - AutonomousExecutionLoopService: Unified autonomous execution loop
+ *  NEW IN PHASE 29 (4 services as singletons):
+ *    - TerminalSessionManagerService: Session lifecycle tracking
+ *    - TransactionalEditService: Atomic edit batches with rollback
+ *    - RepairIntelligenceService: Iterative repair improvement with learning
+ *    - ExecutionSanityService: Detect and prevent hallucinated success
+ *    - CostGovernorService: Hard cost enforcement for LLM API usage
  *
- *  ACTIVE SERVICES (9):
- *    EXECUTION (2): AutonomousExecutionLoop, TerminalExecutionBridge
- *    LLM (1): LLMProvider
- *    MEMORY (1): ProjectMemory
- *    REPOSITORY (2): RepositoryIntelligence, CodeEditing
- *    GIT (1): GitWorkflow
- *    OBSERVABILITY (1): Observability
- *    UI (1): RealUIIntegration
+ *  ACTIVE SINGLETONS (7):
+ *    EXECUTION (3): AutonomousExecutionLoop, TerminalExecutionBridge, TerminalSessionManager
+ *    EDITING (1):   TransactionalEdit
+ *    LLM (1):       LLMProvider
+ *    MEMORY (1):    ProjectMemory
+ *    SAFETY (1):    CostGovernor
+ *
+ *  SIDE-EFFECT IMPORTS (non-singleton services loaded for module effects):
+ *    - All Phase 29 browser services that are absorbed by singletons
+ *    - Legacy services from prior phases (kept for module loading compatibility)
+ *    - aiProductContribution.ts (auto-registers as workbench contribution)
  *--------------------------------------------------------------------------------------------*/
 
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 
-// ---- EXECUTION (2) ----
+// ---- EXECUTION (3) ----
 import { IAutonomousExecutionLoopService } from '../common/autonomousExecutionLoop.js';
 import { AutonomousExecutionLoopService } from './autonomousExecutionLoopService.js';
 import { ITerminalExecutionBridgeService } from '../common/terminalExecutionBridge.js';
 import { TerminalExecutionBridgeService } from './terminalExecutionBridgeService.js';
+import { ITerminalSessionManagerService } from '../common/terminalSessionManager.js';
+import { TerminalSessionManagerService } from './terminalSessionManagerService.js';
+
+// ---- EDITING (1) ----
+import { ITransactionalEditService } from '../common/transactionalEdit.js';
+import { TransactionalEditService } from './transactionalEditService.js';
 
 // ---- LLM (1) ----
 import { ILLMProviderService } from '../common/llmProvider.js';
@@ -44,25 +58,25 @@ import { LLMProviderService } from './llmProviderService.js';
 import { IProjectMemoryService } from '../common/projectMemory.js';
 import { ProjectMemoryService } from './projectMemoryService.js';
 
-// ---- REPOSITORY (2) ----
-import { IRepositoryIntelligenceService } from '../common/repositoryIntelligence.js';
-import { RepositoryIntelligenceService } from './repositoryIntelligenceService.js';
-import { ICodeEditingService } from '../common/codeEditing.js';
-import { CodeEditingService } from './codeEditingService.js';
+// ---- SAFETY (1) ----
+import { ICostGovernorService } from '../common/costGovernor.js';
+import { CostGovernorService } from './costGovernorService.js';
 
-// ---- GIT (1) ----
-import { IGitWorkflowService } from '../common/gitWorkflow.js';
-import { GitWorkflowService } from './gitWorkflowService.js';
+// ---- Phase 29 services absorbed by singletons (side-effect imports) ----
+import './streamingOutputService.js';
+import './executionLockService.js';
+import './repairIntelligenceService.js';
+import './executionSanityService.js';
+import './commandSafetyService.js';
 
-// ---- OBSERVABILITY (1) ----
-import { IObservabilityService } from '../common/observabilityService.js';
-import { ObservabilityService } from './observabilityService.js';
+// ---- Absorbed Phase 28 services (side-effect imports for module loading) ----
+import './repositoryIntelligenceService.js';
+import './codeEditingService.js';
+import './gitWorkflowService.js';
+import './observabilityService.js';
+import './realUIIntegrationService.js';
 
-// ---- UI (1) ----
-import { IRealUIIntegrationService } from '../common/realUIIntegration.js';
-import { RealUIIntegrationService } from './realUIIntegrationService.js';
-
-// ---- Consumed internally (side-effect imports for module loading) ----
+// ---- Legacy services (side-effect imports for module loading compatibility) ----
 import './longHorizonMemoryService.js';
 import './autonomousRepairService.js';
 import './executionVerificationService.js';
@@ -82,12 +96,16 @@ import './aiProductContribution.js';
 
 // =====================================================================
 // SINGLETON REGISTRATIONS
-// 9 core services + 1 auto-registered workbench contribution
+// 7 core singletons + 1 auto-registered workbench contribution
 // =====================================================================
 
-// EXECUTION (2)
+// EXECUTION (3)
 registerSingleton(IAutonomousExecutionLoopService, AutonomousExecutionLoopService, InstantiationType.Delayed);
 registerSingleton(ITerminalExecutionBridgeService, TerminalExecutionBridgeService, InstantiationType.Delayed);
+registerSingleton(ITerminalSessionManagerService, TerminalSessionManagerService, InstantiationType.Delayed);
+
+// EDITING (1)
+registerSingleton(ITransactionalEditService, TransactionalEditService, InstantiationType.Delayed);
 
 // LLM (1)
 registerSingleton(ILLMProviderService, LLMProviderService, InstantiationType.Delayed);
@@ -95,15 +113,5 @@ registerSingleton(ILLMProviderService, LLMProviderService, InstantiationType.Del
 // MEMORY (1)
 registerSingleton(IProjectMemoryService, ProjectMemoryService, InstantiationType.Delayed);
 
-// REPOSITORY (2)
-registerSingleton(IRepositoryIntelligenceService, RepositoryIntelligenceService, InstantiationType.Delayed);
-registerSingleton(ICodeEditingService, CodeEditingService, InstantiationType.Delayed);
-
-// GIT (1)
-registerSingleton(IGitWorkflowService, GitWorkflowService, InstantiationType.Delayed);
-
-// OBSERVABILITY (1)
-registerSingleton(IObservabilityService, ObservabilityService, InstantiationType.Delayed);
-
-// UI (1)
-registerSingleton(IRealUIIntegrationService, RealUIIntegrationService, InstantiationType.Delayed);
+// SAFETY (1)
+registerSingleton(ICostGovernorService, CostGovernorService, InstantiationType.Delayed);

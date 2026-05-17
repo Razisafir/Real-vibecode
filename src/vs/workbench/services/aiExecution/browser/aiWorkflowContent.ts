@@ -985,6 +985,116 @@ select.input { cursor: pointer; appearance: auto; }
         <div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">No autonomous decisions yet</div>
       </div>
     </div>
+
+    <!-- Phase 29: Budget Governor Card -->
+    <div class="card" id="budgetGovernorCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 1v2m0 14v2m-9-9h2m14 0h2"/><circle cx="10" cy="10" r="7"/></svg>
+        Budget Governor
+      </div>
+      <div class="live-stats">
+        <div class="live-stat">
+          <div class="live-stat-label">Token Budget</div>
+          <div class="live-stat-value" id="budgetTokenUsed">0</div>
+          <div class="progress" style="height:3px;margin-top:4px;"><div class="progress-bar" id="budgetTokenBar" style="width:0%"></div></div>
+        </div>
+        <div class="live-stat">
+          <div class="live-stat-label">Cost Budget</div>
+          <div class="live-stat-value" id="budgetCostUsed">$0.00</div>
+          <div class="progress" style="height:3px;margin-top:4px;"><div class="progress-bar" id="budgetCostBar" style="width:0%"></div></div>
+        </div>
+        <div class="live-stat">
+          <div class="live-stat-label">Burn Rate</div>
+          <div class="live-stat-value" id="budgetBurnRate">0 tok/s</div>
+        </div>
+        <div class="live-stat">
+          <div class="live-stat-label">Status</div>
+          <div class="live-stat-value" id="budgetStatus"><span class="badge badge-success">Healthy</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:var(--ai-spacing-sm);margin-top:var(--ai-spacing-md);">
+        <button class="btn btn-danger btn-sm" onclick="emergencyStopBudget()">Emergency Stop</button>
+        <button class="btn btn-sm" onclick="openBudgetSettings()">Budget Settings</button>
+      </div>
+    </div>
+
+    <!-- Phase 29: Execution Locks Card -->
+    <div class="card" id="executionLocksCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="9" width="14" height="10" rx="2"/><path d="M6 9V6a4 4 0 018 0v3"/></svg>
+        Active Locks
+      </div>
+      <div id="activeLocksList">
+        <div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">No active locks</div>
+      </div>
+      <div style="display:flex;gap:var(--ai-spacing-md);margin-top:var(--ai-spacing-sm);font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">
+        <span>File locks: <strong id="lockFileCount">0</strong></span>
+        <span>Project locks: <strong id="lockProjectCount">0</strong></span>
+        <span>Deadlocks resolved: <strong id="lockDeadlockCount">0</strong></span>
+      </div>
+    </div>
+
+    <!-- Phase 29: Execution Sanity Card -->
+    <div class="card" id="executionSanityCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l8 16H2z"/><path d="M10 7v4M10 14h0"/></svg>
+        Execution Sanity
+      </div>
+      <div id="sanityResultsList">
+        <div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">No sanity checks run yet</div>
+      </div>
+      <div style="display:flex;gap:var(--ai-spacing-md);margin-top:var(--ai-spacing-sm);font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">
+        <span>Hallucinations caught: <strong id="sanityHallucinationCount">0</strong></span>
+        <span>Prevention rate: <strong id="sanityPreventionRate">--</strong></span>
+      </div>
+    </div>
+
+    <!-- Phase 29: Terminal Sessions Card -->
+    <div class="card" id="terminalSessionsCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M6 8l3 2-3 2"/></svg>
+        Terminal Sessions
+      </div>
+      <div id="activeSessionsList">
+        <div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">No active sessions</div>
+      </div>
+      <div style="display:flex;gap:var(--ai-spacing-md);margin-top:var(--ai-spacing-sm);font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">
+        <span>Active: <strong id="sessionActiveCount">0</strong></span>
+        <span>Stuck: <strong id="sessionStuckCount">0</strong></span>
+        <span>Health: <strong id="sessionHealthRate">--</strong></span>
+      </div>
+    </div>
+
+    <!-- Phase 29: Command Safety Card -->
+    <div class="card" id="commandSafetyCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 1l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5z"/></svg>
+        Command Safety
+      </div>
+      <div style="display:flex;gap:var(--ai-spacing-md);font-size:var(--ai-font-xs);">
+        <span class="badge badge-success">Blocked: <strong id="cmdBlockedCount">0</strong></span>
+        <span class="badge badge-info">Allowed: <strong id="cmdAllowedCount">0</strong></span>
+      </div>
+      <div id="commandSafetyLog" style="margin-top:var(--ai-spacing-sm);font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">
+        No commands analyzed yet
+      </div>
+    </div>
+
+    <!-- Phase 29: Transaction Status Card -->
+    <div class="card" id="transactionStatusCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="16" height="10" rx="2"/><path d="M6 10h8"/></svg>
+        Transaction Status
+      </div>
+      <div id="activeTransactionsList">
+        <div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">No active transactions</div>
+      </div>
+      <div style="display:flex;gap:var(--ai-spacing-md);margin-top:var(--ai-spacing-sm);font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">
+        <span>Committed: <strong id="txnCommittedCount">0</strong></span>
+        <span>Rolled back: <strong id="txnRolledBackCount">0</strong></span>
+        <span>Active: <strong id="txnActiveCount">0</strong></span>
+      </div>
+    </div>
   </div>
 
   <!-- Panel 8: Memory & Summary -->
@@ -1612,6 +1722,15 @@ function saveSettings() {
   closeSettings();
 }
 
+// Phase 29: Budget Governor functions
+function emergencyStopBudget() {
+  vscode.postMessage({ type: 'emergencyStop', reason: 'User triggered emergency stop from UI' });
+}
+
+function openBudgetSettings() {
+  vscode.postMessage({ type: 'openBudgetSettings' });
+}
+
 function previewTheme(theme) {
   applyTheme(theme);
 }
@@ -1785,6 +1904,114 @@ window.addEventListener('message', function(event) {
         if (msg.state.settings) { Object.assign(state.settings, msg.state.settings); applyTheme(state.settings.theme); }
       }
       break;
+    // Phase 29: Budget Governor update
+    case 'budgetUpdate': {
+      var d = msg.data;
+      var tokEl = document.getElementById('budgetTokenUsed');
+      if (tokEl) tokEl.textContent = formatTokens(d.tokensUsed || 0);
+      var costEl = document.getElementById('budgetCostUsed');
+      if (costEl) costEl.textContent = '$' + (d.costUsed || 0).toFixed(4);
+      var tokBar = document.getElementById('budgetTokenBar');
+      if (tokBar) tokBar.style.width = Math.min(100, (d.tokenFraction || 0) * 100) + '%';
+      var costBar = document.getElementById('budgetCostBar');
+      if (costBar) costBar.style.width = Math.min(100, (d.costFraction || 0) * 100) + '%';
+      var burnEl = document.getElementById('budgetBurnRate');
+      if (burnEl) burnEl.textContent = (d.tokenBurnRate || 0).toFixed(0) + ' tok/s';
+      var statEl = document.getElementById('budgetStatus');
+      if (statEl) {
+        var cls = d.status === 'healthy' ? 'badge-success' : d.status === 'warning' ? 'badge-warning' : d.status === 'exceeded' ? 'badge-error' : 'badge-error';
+        statEl.innerHTML = '<span class="badge ' + cls + '">' + (d.status || 'Healthy') + '</span>';
+      }
+      break;
+    }
+    // Phase 29: Execution locks update
+    case 'lockUpdate': {
+      var d = msg.data;
+      var list = document.getElementById('activeLocksList');
+      if (list && d.locks) {
+        if (d.locks.length === 0) {
+          list.innerHTML = '<div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">No active locks</div>';
+        } else {
+          list.innerHTML = d.locks.map(function(l) { return '<div style="font-size:var(--ai-font-xs);display:flex;gap:var(--ai-spacing-sm);align-items:center;"><span class="badge badge-warning">' + l.scope + '</span><span style="font-family:monospace;">' + l.resource + '</span><span style="color:var(--vscode-descriptionForeground,#8888a0);">by ' + l.owner + '</span></div>'; }).join('');
+        }
+      }
+      var fc = document.getElementById('lockFileCount');
+      if (fc) fc.textContent = String((d.fileLockCount || 0));
+      var pc = document.getElementById('lockProjectCount');
+      if (pc) pc.textContent = String((d.projectLockCount || 0));
+      var dc = document.getElementById('lockDeadlockCount');
+      if (dc) dc.textContent = String((d.deadlocksResolved || 0));
+      break;
+    }
+    // Phase 29: Execution sanity update
+    case 'sanityUpdate': {
+      var d = msg.data;
+      var list = document.getElementById('sanityResultsList');
+      if (list && d.results) {
+        if (d.results.length === 0) {
+          list.innerHTML = '<div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">All checks passed</div>';
+        } else {
+          list.innerHTML = d.results.map(function(r) { var cls = r.severity === 'pass' ? 'badge-success' : r.severity === 'warning' ? 'badge-warning' : 'badge-error'; return '<div style="font-size:var(--ai-font-xs);display:flex;gap:var(--ai-spacing-sm);align-items:center;margin-bottom:2px;"><span class="badge ' + cls + '">' + r.severity + '</span><span>' + r.checkName + ': ' + r.message + '</span></div>'; }).join('');
+        }
+      }
+      var hc = document.getElementById('sanityHallucinationCount');
+      if (hc) hc.textContent = String(d.hallucinationCount || 0);
+      var pr = document.getElementById('sanityPreventionRate');
+      if (pr) pr.textContent = d.preventionRate !== undefined ? (d.preventionRate * 100).toFixed(0) + '%' : '--';
+      break;
+    }
+    // Phase 29: Terminal sessions update
+    case 'sessionUpdate': {
+      var d = msg.data;
+      var list = document.getElementById('activeSessionsList');
+      if (list && d.sessions) {
+        if (d.sessions.length === 0) {
+          list.innerHTML = '<div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">No active sessions</div>';
+        } else {
+          list.innerHTML = d.sessions.map(function(s) { var cls = s.state === 'running' ? 'badge-info' : s.state === 'stuck' ? 'badge-error' : s.state === 'completed' ? 'badge-success' : 'badge-neutral'; return '<div style="font-size:var(--ai-font-xs);display:flex;gap:var(--ai-spacing-sm);align-items:center;margin-bottom:2px;"><span class="badge ' + cls + '">' + s.state + '</span><span style="font-family:monospace;">' + s.command.substring(0, 40) + '</span><span style="color:var(--vscode-descriptionForeground,#8888a0);">' + (s.durationMs ? (s.durationMs / 1000).toFixed(1) + 's' : '') + '</span></div>'; }).join('');
+        }
+      }
+      var ac = document.getElementById('sessionActiveCount');
+      if (ac) ac.textContent = String(d.activeCount || 0);
+      var sc = document.getElementById('sessionStuckCount');
+      if (sc) sc.textContent = String(d.stuckCount || 0);
+      var hr = document.getElementById('sessionHealthRate');
+      if (hr) hr.textContent = d.healthRate !== undefined ? (d.healthRate * 100).toFixed(0) + '%' : '--';
+      break;
+    }
+    // Phase 29: Command safety update
+    case 'commandSafetyUpdate': {
+      var d = msg.data;
+      var bc = document.getElementById('cmdBlockedCount');
+      if (bc) bc.textContent = String(d.blockedCount || 0);
+      var alc = document.getElementById('cmdAllowedCount');
+      if (alc) alc.textContent = String(d.allowedCount || 0);
+      var log = document.getElementById('commandSafetyLog');
+      if (log && d.lastCheck) {
+        var rcls = d.lastCheck.risk === 'safe' ? 'badge-success' : d.lastCheck.risk === 'lowRisk' ? 'badge-info' : d.lastCheck.risk === 'mediumRisk' ? 'badge-warning' : 'badge-error';
+        log.innerHTML = '<div style="display:flex;gap:var(--ai-spacing-sm);align-items:center;"><span class="badge ' + rcls + '">' + d.lastCheck.risk + '</span><span style="font-family:monospace;">' + d.lastCheck.command.substring(0, 50) + '</span></div>';
+      }
+      break;
+    }
+    // Phase 29: Transaction status update
+    case 'transactionUpdate': {
+      var d = msg.data;
+      var list = document.getElementById('activeTransactionsList');
+      if (list && d.transactions) {
+        if (d.transactions.length === 0) {
+          list.innerHTML = '<div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">No active transactions</div>';
+        } else {
+          list.innerHTML = d.transactions.map(function(t) { var cls = t.state === 'committed' ? 'badge-success' : t.state === 'rolledBack' ? 'badge-error' : t.state === 'committing' ? 'badge-warning' : 'badge-info'; return '<div style="font-size:var(--ai-font-xs);display:flex;gap:var(--ai-spacing-sm);align-items:center;margin-bottom:2px;"><span class="badge ' + cls + '">' + t.state + '</span><span>' + t.description + '</span><span style="color:var(--vscode-descriptionForeground,#8888a0);">' + t.editCount + ' edits</span></div>'; }).join('');
+        }
+      }
+      var cc = document.getElementById('txnCommittedCount');
+      if (cc) cc.textContent = String(d.committedCount || 0);
+      var rc = document.getElementById('txnRolledBackCount');
+      if (rc) rc.textContent = String(d.rolledBackCount || 0);
+      var tc = document.getElementById('txnActiveCount');
+      if (tc) tc.textContent = String(d.activeCount || 0);
+      break;
+    }
   }
 });
 
