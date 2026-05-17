@@ -145,8 +145,7 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                 // Phase 30: Check budget BEFORE making the API call
                 const estimatedTokens = request.maxTokens || 4096;
                 if (!this.costGovernor.isCallAllowed(estimatedTokens)) {
-                        const snapshot = this.costGovernor.getBudgetSnapshot();
-                        throw new Error(`[LLMProvider] Budget exceeded: tokens=${snapshot.tokensUsed}/${snapshot.tokenCeiling}, cost=$${snapshot.costUsed.toFixed(4)}/$${snapshot.costCeiling.toFixed(2)}. Emergency stop: ${this.costGovernor.isEmergencyStopped()}`);
+                        throw new BudgetExceededError(this.costGovernor.getBudgetSnapshot());
                 }
 
                 const cts = new CancellationTokenSource();

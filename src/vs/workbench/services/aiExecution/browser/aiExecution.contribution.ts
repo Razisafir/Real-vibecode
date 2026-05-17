@@ -1,10 +1,10 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel -- Phase 31: Integration, DI Fix & Honesty Cleanup
+ *  AI Execution Kernel -- Phase 32: Critical Bug Fixes, Consistency Cleanup & Smoke Test
  *  Real Vibecode -- AI-Native IDE
  *
  *  aiExecution.contribution.ts -- Service registration + real UI wiring.
  *
- *  PHASE 31: ALL services that are injected via DI MUST be registered here.
+ *  PHASE 32: ALL services that are injected via DI MUST be registered here.
  *  No fictional absorption. No dead side-effect imports. Every registered
  *  singleton has its constructor dependencies also registered.
  *
@@ -30,6 +30,12 @@
  *    - IAgentOrchestratorService: Has implementation but not registered (not injected by any registered singleton)
  *    - IExecutionGraphService: Has implementation but not registered (not injected by any registered singleton)
  *    - IAIContextService: Has implementation but not registered (not injected by any registered singleton)
+ *
+ *  PHASE 32 FIXES:
+ *    - session.id scoping bug in TerminalExecutionBridgeService FIXED
+ *    - markComplete() now called in error path before unregisterStream()
+ *    - BudgetExceededError thrown consistently from both sendRequestToProvider and sendRequestWithFallback
+ *    - Dead code removed from AIProductContribution (IInstantiationService, CheckpointType, ExecutionEventType)
  *--------------------------------------------------------------------------------------------*/
 
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';

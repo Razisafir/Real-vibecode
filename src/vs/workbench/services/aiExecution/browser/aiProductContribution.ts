@@ -11,13 +11,18 @@
  *    5. Registers settings for theme, execution, and memory
  *    6. Wires existing services to the UI via postMessage
  *    7. Wires Phase 25 services (LLM, Memory, Autonomous Execution, Sandbox, UI)
+ *
+ *  Phase 32 changes:
+ *    - Removed IInstantiationService injection (was injected but never used)
+ *    - Removed CheckpointType import (was imported but never referenced)
+ *    - Removed ExecutionEventType import (was imported but never referenced)
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { Emitter } from '../../../../base/common/event.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IWorkbenchContribution } from '../../../common/contributions.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
+
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
 
@@ -47,7 +52,7 @@ import { IAIUnifiedStateService } from '../common/aiUnifiedStateService.js';
 import { ILLMProviderService } from '../common/llmProvider.js';
 import { IProviderHealthService } from '../common/llmProvider.js';
 import { ICredentialStoreService } from '../common/llmProvider.js';
-import { IProjectMemoryService, MemoryType, MemoryPriority, CheckpointType } from '../common/projectMemory.js';
+import { IProjectMemoryService, MemoryType, MemoryPriority } from '../common/projectMemory.js';
 import { IAutonomousExecutionService, ExecutionStage, ApprovalMode } from '../common/autonomousExecution.js';
 import { IRealUIIntegrationService, AITheme } from '../common/realUIIntegration.js';
 
@@ -62,7 +67,7 @@ import { IContextWindowOptimizationService } from '../common/contextWindowOptimi
 // Phase 28 service imports
 import { IAutonomousExecutionLoopService, LoopState } from '../common/autonomousExecutionLoop.js';
 import { ITerminalExecutionBridgeService } from '../common/terminalExecutionBridge.js';
-import { ExecutionEventType, ExecutionEvent } from '../common/executionEvents.js';
+import { ExecutionEvent } from '../common/executionEvents.js';
 
 // Webview HTML content
 import { getAIWorkflowHTML } from './aiWorkflowContent.js';
@@ -551,7 +556,6 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
         private _cachedPlan: any | null = null;
 
         constructor(
-                @IInstantiationService private readonly instantiationService: IInstantiationService,
                 @ILogService private readonly logService: ILogService,
                 @IStorageService private readonly storageService: IStorageService,
                 @IWebviewViewService private readonly webviewViewService: IWebviewViewService,
