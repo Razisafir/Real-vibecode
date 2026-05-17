@@ -190,6 +190,69 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
                         description: 'Show execution logs panel during AI operations',
                         scope: ConfigurationScope.APPLICATION,
                 },
+                'aiExecution.activeProvider': {
+                        type: 'string',
+                        enum: ['openai', 'anthropic', 'google-gemini', 'openrouter', 'ollama', 'lm-studio', 'generic-openai'],
+                        default: 'openai',
+                        description: 'Active LLM provider for AI execution',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.activeModel': {
+                        type: 'string',
+                        default: 'gpt-4o',
+                        description: 'Active model ID for the selected provider',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.provider.openai.apiKey': {
+                        type: 'string',
+                        default: '',
+                        description: 'OpenAI API key (stored securely via SecretStorage)',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.provider.anthropic.apiKey': {
+                        type: 'string',
+                        default: '',
+                        description: 'Anthropic API key (stored securely via SecretStorage)',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.provider.gemini.apiKey': {
+                        type: 'string',
+                        default: '',
+                        description: 'Google Gemini API key (stored securely via SecretStorage)',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.provider.openrouter.apiKey': {
+                        type: 'string',
+                        default: '',
+                        description: 'OpenRouter API key (stored securely via SecretStorage)',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.provider.generic.endpoint': {
+                        type: 'string',
+                        default: '',
+                        description: 'Custom endpoint URL for generic OpenAI-compatible provider',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.maxExecutionRetries': {
+                        type: 'number',
+                        default: 3,
+                        minimum: 0,
+                        maximum: 10,
+                        description: 'Maximum retry attempts per execution step',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.memoryTokenBudget': {
+                        type: 'number',
+                        default: 50000,
+                        description: 'Maximum token budget for project memory before compaction',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.autoCompaction': {
+                        type: 'boolean',
+                        default: true,
+                        description: 'Automatically compact memory when token budget exceeded',
+                        scope: ConfigurationScope.APPLICATION,
+                },
         },
 });
 
@@ -322,6 +385,11 @@ const AI_ICON_REGISTRY: Map<string, { path: string; label: string }> = new Map([
         ['project', { path: 'M2 5h6l2 2h8v9H2V5z', label: 'Project' }],
         ['plan', { path: 'M4 3h12v14H4V3zm3 3h6M7 9h6M7 12h4', label: 'Plan' }],
         ['memory', { path: 'M3 6h14v10H3V6zm2 2v6h10V8H5z', label: 'Memory' }],
+        ['provider', { path: 'M2 10l4-4v2h3V5h2v3h3V6l4 4-4 4v-2h-3v3H9v-3H6v2l-4-4z', label: 'Provider' }],
+        ['key', { path: 'M11 3a4 4 0 014 4 4 4 0 01-4 4c-1 0-2-.4-2.7-1L6 12.7V15H4v-2H2v-2h2.3l2.7-2.7C6.4 7 6 6 6 5a4 4 0 014-4zm1 2a1 1 0 100 2 1 1 0 000-2z', label: 'API Key' }],
+        ['sandbox', { path: 'M3 3h14v14H3V3zm2 2v10h10V5H5zm2 3h6M7 11h4', label: 'Sandbox' }],
+        ['token', { path: 'M5 3h10l-3 6 3 6H5l3-6-3-6z', label: 'Token' }],
+        ['shield', { path: 'M10 2L3 5v5c0 5 3.5 9.7 7 11 3.5-1.3 7-6 7-11V5l-7-3z', label: 'Security' }],
 ]);
 
 /**
