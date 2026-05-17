@@ -10,7 +10,7 @@
  * Communicates with VS Code via postMessage API.
  */
 export function getAIWorkflowHTML(): string {
-	return `<!DOCTYPE html>
+        return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -399,12 +399,72 @@ select.input { cursor: pointer; appearance: auto; }
   .token-grid { grid-template-columns: 1fr; }
   .live-stats { grid-template-columns: 1fr; }
   .summary-grid { grid-template-columns: 1fr 1fr; }
+  .compression-stats { grid-template-columns: 1fr; }
+  .context-meter-stats { flex-direction: column; gap: var(--ai-spacing-sm); }
 }
 
 /* ===== Reduced Motion ===== */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0ms !important; transition-duration: 0ms !important; }
 }
+
+/* ===== Repository Map ===== */
+.repo-map { display: flex; flex-direction: column; gap: var(--ai-spacing-md); }
+.repo-map-header { display: flex; align-items: center; gap: var(--ai-spacing-md); flex-wrap: wrap; }
+.repo-map-type { font-size: var(--ai-font-sm); font-weight: var(--ai-fw-semibold); }
+.repo-map-langs { display: flex; gap: var(--ai-spacing-xs); flex-wrap: wrap; }
+.repo-map-frameworks { display: flex; gap: var(--ai-spacing-xs); flex-wrap: wrap; }
+.repo-dep-list { display: flex; flex-direction: column; gap: 2px; }
+.repo-dep-item { display: flex; align-items: center; gap: var(--ai-spacing-sm); padding: 2px 0; font-size: var(--ai-font-xs); }
+.repo-dep-item .dep-rank { width: 20px; text-align: right; color: var(--vscode-descriptionForeground, #8888a0); flex-shrink: 0; }
+.repo-dep-item .dep-path { font-family: 'Cascadia Code','Fira Code',monospace; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.repo-dep-item .dep-count { color: var(--vscode-descriptionForeground, #8888a0); flex-shrink: 0; }
+
+/* ===== Repair Panel ===== */
+.repair-panel { display: flex; flex-direction: column; gap: var(--ai-spacing-sm); }
+.repair-attempt { display: flex; align-items: center; gap: var(--ai-spacing-sm); padding: var(--ai-spacing-sm) var(--ai-spacing-md); background: rgba(255,255,255,0.02); border-radius: var(--ai-radius-sm); font-size: var(--ai-font-xs); }
+.repair-attempt .attempt-num { width: 20px; text-align: center; color: var(--vscode-descriptionForeground, #8888a0); }
+.repair-attempt .attempt-type { font-family: 'Cascadia Code','Fira Code',monospace; flex: 1; }
+.repair-attempt .attempt-result { padding: 1px var(--ai-spacing-sm); border-radius: var(--ai-radius-xs); font-weight: var(--ai-fw-semibold); }
+.repair-attempt .attempt-result.success { background: rgba(74,222,128,0.15); color: #4ade80; }
+.repair-attempt .attempt-result.partial { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.repair-attempt .attempt-result.failed { background: rgba(248,113,113,0.15); color: #f87171; }
+.repair-budget { display: flex; align-items: center; gap: var(--ai-spacing-md); font-size: var(--ai-font-xs); color: var(--vscode-descriptionForeground, #8888a0); }
+
+/* ===== Git Panel ===== */
+.git-panel { display: flex; flex-direction: column; gap: var(--ai-spacing-sm); }
+.git-branch { display: flex; align-items: center; gap: var(--ai-spacing-sm); font-size: var(--ai-font-sm); font-weight: var(--ai-fw-medium); }
+.git-branch svg { color: var(--vscode-button-background, #6c8cff); }
+.git-stats { display: flex; gap: var(--ai-spacing-md); flex-wrap: wrap; }
+.git-stat { display: flex; align-items: center; gap: var(--ai-spacing-xs); font-size: var(--ai-font-xs); }
+.git-commits { display: flex; flex-direction: column; gap: 2px; }
+.git-commit { display: flex; align-items: center; gap: var(--ai-spacing-sm); padding: 2px 0; font-size: var(--ai-font-xs); }
+.git-commit-hash { font-family: 'Cascadia Code','Fira Code',monospace; color: var(--vscode-button-background, #6c8cff); flex-shrink: 0; }
+.git-commit-msg { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== Context Meter ===== */
+.context-meter { display: flex; flex-direction: column; gap: var(--ai-spacing-sm); }
+.context-meter-stats { display: flex; gap: var(--ai-spacing-lg); font-size: var(--ai-font-xs); }
+.context-meter-stat { display: flex; flex-direction: column; }
+.context-meter-stat .stat-value { font-size: var(--ai-font-lg); font-weight: var(--ai-fw-bold); font-variant-numeric: tabular-nums; }
+.context-meter-stat .stat-label { color: var(--vscode-descriptionForeground, #8888a0); }
+
+/* ===== Compression Viz ===== */
+.compression-viz { display: flex; flex-direction: column; gap: var(--ai-spacing-md); }
+.compression-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--ai-spacing-md); }
+.compression-stat { text-align: center; padding: var(--ai-spacing-md); background: var(--vscode-editor-background, #1e1e2e); border-radius: var(--ai-radius-sm); }
+.compression-stat .stat-value { font-size: var(--ai-font-xl); font-weight: var(--ai-fw-bold); color: var(--vscode-button-background, #6c8cff); }
+.compression-stat .stat-label { font-size: var(--ai-font-xs); color: var(--vscode-descriptionForeground, #8888a0); margin-top: 2px; }
+
+/* ===== Decision Logs ===== */
+.decision-logs { display: flex; flex-direction: column; gap: var(--ai-spacing-xs); max-height: 200px; overflow-y: auto; }
+.decision-entry { display: flex; gap: var(--ai-spacing-md); padding: var(--ai-spacing-sm); font-size: var(--ai-font-xs); border-bottom: 1px solid var(--ai-glass-border); }
+.decision-time { color: var(--vscode-descriptionForeground, #8888a0); flex-shrink: 0; font-family: 'Cascadia Code','Fira Code',monospace; font-size: 10px; }
+.decision-type { padding: 1px var(--ai-spacing-sm); border-radius: var(--ai-radius-xs); font-weight: var(--ai-fw-semibold); font-size: 10px; text-transform: uppercase; flex-shrink: 0; }
+.decision-type.execution { background: rgba(108,140,255,0.15); color: #6c8cff; }
+.decision-type.repair { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.decision-type.verification { background: rgba(74,222,128,0.15); color: #4ade80; }
+.decision-text { flex: 1; line-height: var(--ai-lh-relaxed); }
 </style>
 </head>
 <body>
@@ -843,6 +903,88 @@ select.input { cursor: pointer; appearance: auto; }
         <div style="color:var(--vscode-descriptionForeground,#8888a0);font-size:var(--ai-font-xs);">No files modified yet.</div>
       </div>
     </div>
+
+    <!-- Repository Map -->
+    <div class="card" id="repoMapCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h6l2 2h8v10H2z"/></svg>
+        Repository Map
+      </div>
+      <div class="repo-map" id="repoMapContent">
+        <div class="repo-map-header">
+          <span class="badge badge-info" id="repoType">Scanning...</span>
+          <div class="repo-map-langs" id="repoLangs"></div>
+        </div>
+        <div class="repo-map-frameworks" id="repoFrameworks"></div>
+        <div class="repo-dep-list" id="repoDepList">
+          <div class="skeleton skeleton-line" style="width:80%"></div>
+          <div class="skeleton skeleton-line" style="width:60%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Context Usage Meter -->
+    <div class="card" id="contextMeterCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h10l-3 6 3 6H5l3-6-3-6z"/></svg>
+        Context Usage
+      </div>
+      <div class="context-meter" id="contextMeterContent">
+        <div class="progress" style="height:8px;"><div class="progress-bar" id="contextProgressBar" style="width:0%"></div></div>
+        <div class="context-meter-stats">
+          <div class="context-meter-stat"><span class="stat-value" id="ctxUsed">0</span><span class="stat-label">Used</span></div>
+          <div class="context-meter-stat"><span class="stat-value" id="ctxMax">128K</span><span class="stat-label">Max</span></div>
+          <div class="context-meter-stat"><span class="stat-value" id="ctxAvail">128K</span><span class="stat-label">Available</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Repair Attempts Panel -->
+    <div class="card" id="repairPanelCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 4v5h5"/><path d="M3.5 13A7 7 0 1017 10"/></svg>
+        Repair Attempts
+      </div>
+      <div class="repair-panel" id="repairPanelContent">
+        <div class="repair-budget">Budget: <span id="repairBudgetText">0 / 3 used</span></div>
+        <div id="repairAttemptsList">
+          <div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">No repair attempts yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Git Activity Panel -->
+    <div class="card" id="gitPanelCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="3" r="2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="10" r="2"/><path d="M7 5v10M7 10h10"/></svg>
+        Git Activity
+      </div>
+      <div class="git-panel" id="gitPanelContent">
+        <div class="git-branch">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="3" r="2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="10" r="2"/><path d="M7 5v10M7 10h10"/></svg>
+          <span id="gitBranch">--</span>
+        </div>
+        <div class="git-stats" id="gitStats">
+          <div class="git-stat"><span class="badge badge-success" id="gitStaged">0 staged</span></div>
+          <div class="git-stat"><span class="badge badge-warning" id="gitModified">0 modified</span></div>
+          <div class="git-stat"><span class="badge badge-neutral" id="gitUntracked">0 untracked</span></div>
+        </div>
+        <div class="git-commits" id="gitCommitsList">
+          <div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">No commits yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Decision Logs -->
+    <div class="card" id="decisionLogsCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12v14H4z"/><path d="M7 7h6M7 10h6M7 13h4"/></svg>
+        Autonomous Decisions
+      </div>
+      <div class="decision-logs" id="decisionLogsContent">
+        <div style="font-size:var(--ai-font-xs);color:var(--vscode-descriptionForeground,#8888a0);">No autonomous decisions yet</div>
+      </div>
+    </div>
   </div>
 
   <!-- Panel 8: Memory & Summary -->
@@ -893,6 +1035,24 @@ select.input { cursor: pointer; appearance: auto; }
       <div class="card-title">Checkpoint History</div>
       <div id="checkpointHistory" style="color:var(--vscode-descriptionForeground,#8888a0);font-size:var(--ai-font-xs);">No checkpoints recorded.</div>
     </div>
+
+    <!-- Memory Compression -->
+    <div class="card" id="compressionCard">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h14v10H3z"/><path d="M5 8v6h10V8z"/></svg>
+        Memory Compression
+      </div>
+      <div class="compression-viz" id="compressionContent">
+        <div class="compression-stats">
+          <div class="compression-stat"><div class="stat-value" id="compRatio">--</div><div class="stat-label">Compression Ratio</div></div>
+          <div class="compression-stat"><div class="stat-value" id="compEntries">0</div><div class="stat-label">Entries Compressed</div></div>
+          <div class="compression-stat"><div class="stat-value" id="compTokensSaved">0</div><div class="stat-label">Tokens Saved</div></div>
+        </div>
+        <div class="progress" style="height:6px;"><div class="progress-bar" id="compProgressBar" style="width:0%;background:var(--vscode-testing-iconPassed,#4ade80);"></div></div>
+        <div class="progress-label"><span>Memory utilization</span><span id="compPercent">0%</span></div>
+      </div>
+    </div>
+
     <div style="display:flex;gap:var(--ai-spacing-sm);justify-content:flex-end;">
       <button class="btn" onclick="goToStep(0)">New Project</button>
       <button class="btn-primary btn" onclick="exportResults()">Export</button>
@@ -1486,6 +1646,12 @@ function fmtDuration(secs) {
   return h + 'h ' + m + 'm';
 }
 
+function formatTokens(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return String(n);
+}
+
 /* ===== Message Handler ===== */
 window.addEventListener('message', function(event) {
   var msg = event.data;
@@ -1528,6 +1694,81 @@ window.addEventListener('message', function(event) {
       var dot = document.getElementById('providerHealthDot');
       if (dot) { dot.className = 'health-dot ' + (msg.status === 'ok' ? 'ok' : msg.status === 'warn' ? 'warn' : 'err'); }
       break;
+    case 'repoScanResult': {
+      var d = msg.data;
+      var typeEl = document.getElementById('repoType');
+      if (typeEl) typeEl.textContent = d.projectType || 'Unknown';
+      var langsEl = document.getElementById('repoLangs');
+      if (langsEl && d.languages) langsEl.innerHTML = d.languages.map(function(l) { return '<span class="badge badge-info">' + l + '</span>'; }).join('');
+      var fwEl = document.getElementById('repoFrameworks');
+      if (fwEl && d.frameworks) fwEl.innerHTML = d.frameworks.map(function(f) { return '<span class="badge badge-neutral">' + f + '</span>'; }).join('');
+      var depEl = document.getElementById('repoDepList');
+      if (depEl && d.topDependencies) depEl.innerHTML = d.topDependencies.map(function(dep, i) { return '<div class="repo-dep-item"><span class="dep-rank">' + (i+1) + '</span><span class="dep-path">' + dep.path + '</span><span class="dep-count">' + dep.importedBy + ' imports</span></div>'; }).join('');
+      break;
+    }
+    case 'contextUsage': {
+      var d = msg.data;
+      var bar = document.getElementById('contextProgressBar');
+      if (bar) bar.style.width = Math.min(100, d.utilizationPercent || 0) + '%';
+      var usedEl = document.getElementById('ctxUsed');
+      if (usedEl) usedEl.textContent = formatTokens(d.used || 0);
+      var maxEl = document.getElementById('ctxMax');
+      if (maxEl) maxEl.textContent = formatTokens(d.max || 128000);
+      var availEl = document.getElementById('ctxAvail');
+      if (availEl) availEl.textContent = formatTokens(d.available || 0);
+      break;
+    }
+    case 'repairAttempt': {
+      var d = msg.data;
+      var list = document.getElementById('repairAttemptsList');
+      var budget = document.getElementById('repairBudgetText');
+      if (budget) budget.textContent = (d.attemptsUsed || 0) + ' / ' + (d.maxAttempts || 3) + ' used';
+      if (list && d.attempts) list.innerHTML = d.attempts.map(function(a, i) { return '<div class="repair-attempt"><span class="attempt-num">#' + (i+1) + '</span><span class="attempt-type">' + (a.failureType || 'unknown') + '</span><span class="attempt-result ' + (a.result || 'failed') + '">' + (a.result || 'failed') + '</span></div>'; }).join('');
+      break;
+    }
+    case 'gitStatus': {
+      var d = msg.data;
+      var branchEl = document.getElementById('gitBranch');
+      if (branchEl) branchEl.textContent = d.branch || '--';
+      var stagedEl = document.getElementById('gitStaged');
+      if (stagedEl) stagedEl.textContent = (d.staged || 0) + ' staged';
+      var modEl = document.getElementById('gitModified');
+      if (modEl) modEl.textContent = (d.modified || 0) + ' modified';
+      var unEl = document.getElementById('gitUntracked');
+      if (unEl) unEl.textContent = (d.untracked || 0) + ' untracked';
+      break;
+    }
+    case 'gitCommits': {
+      var list = document.getElementById('gitCommitsList');
+      if (list && msg.commits) list.innerHTML = msg.commits.map(function(c) { return '<div class="git-commit"><span class="git-commit-hash">' + (c.shortHash || c.hash?.substring(0,7)) + '</span><span class="git-commit-msg">' + (c.message || '') + '</span></div>'; }).join('');
+      break;
+    }
+    case 'decisionLog': {
+      var list = document.getElementById('decisionLogsContent');
+      if (!list) break;
+      var d = msg.data;
+      var existing = list.querySelector('.no-decisions');
+      if (existing) existing.remove();
+      var entry = document.createElement('div');
+      entry.className = 'decision-entry';
+      entry.innerHTML = '<span class="decision-time">' + new Date(d.timestamp || Date.now()).toLocaleTimeString() + '</span><span class="decision-type ' + (d.type || 'execution') + '">' + (d.type || 'execution') + '</span><span class="decision-text">' + (d.text || '') + '</span>';
+      list.prepend(entry);
+      break;
+    }
+    case 'memoryCompression': {
+      var d = msg.data;
+      var ratioEl = document.getElementById('compRatio');
+      if (ratioEl) ratioEl.textContent = (d.ratio || 0).toFixed(1) + 'x';
+      var entriesEl = document.getElementById('compEntries');
+      if (entriesEl) entriesEl.textContent = String(d.entriesCompressed || 0);
+      var savedEl = document.getElementById('compTokensSaved');
+      if (savedEl) savedEl.textContent = formatTokens(d.tokensSaved || 0);
+      var bar = document.getElementById('compProgressBar');
+      if (bar) bar.style.width = Math.min(100, d.utilizationPercent || 0) + '%';
+      var pct = document.getElementById('compPercent');
+      if (pct) pct.textContent = (d.utilizationPercent || 0).toFixed(0) + '%';
+      break;
+    }
     case 'restoreState':
       if (msg.state) {
         state.projectData = msg.state.project;
