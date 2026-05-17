@@ -35,6 +35,25 @@ import {
 import { ICostGovernorService, CostRecord } from '../common/costGovernor.js';
 
 // =====================================================================
+// BudgetExceededError -- Specific error for budget-exceeded fallback
+// Phase 31: Distinguishes budget exhaustion from generic provider failures
+// =====================================================================
+
+export class BudgetExceededError extends Error {
+        constructor(
+                public readonly budgetSnapshot: { tokensUsed: number; tokenCeiling: number; costUsed: number; costCeiling: number; emergencyStop: boolean },
+        ) {
+                super(
+                        `Budget exceeded: tokens=${budgetSnapshot.tokensUsed}/${budgetSnapshot.tokenCeiling}, ` +
+                        `cost=$${budgetSnapshot.costUsed.toFixed(4)}/$${budgetSnapshot.costCeiling.toFixed(2)}. ` +
+                        `Emergency stop: ${budgetSnapshot.emergencyStop}`
+                );
+                this.name = 'BudgetExceededError';
+        }
+}
+
+
+// =====================================================================
 // #140: LLM Provider Service
 // =====================================================================
 
@@ -226,6 +245,11 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                                         }
                                 }
                         }
+                }
+
+                // Phase 31: If no provider was attempted (all skipped due to budget), throw BudgetExceededError
+                if (!lastError) {
+                        throw new BudgetExceededError(this.costGovernor.getBudgetSnapshot());
                 }
 
                 throw new Error(`[LLMProvider] All providers in fallback chain failed. Last error: ${lastError?.message || 'unknown'}`);

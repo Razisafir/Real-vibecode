@@ -42,7 +42,9 @@ import { Emitter, Event } from '../../../../base/common/event.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
+import { IFileService } from '../../../../platform/files/common/files.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
+import { URI } from '../../../../base/common/uri.js';
 
 import { ILLMProviderService, LLMRequest, LLMMessage } from '../common/llmProvider.js';
 import { IExecutionLockService, LockScope } from '../common/executionLock.js';
@@ -72,7 +74,6 @@ import {
 const STORAGE_PLAN_PREFIX = 'aiExecution.loop.plan.';
 const STORAGE_CRASH_KEY = 'aiExecution.loop.crashRecovery';
 const MAX_REPAIR_ATTEMPTS_PER_MILESTONE = 5;
-const MAX_STEP_RETRIES = 3;
 const VERIFICATION_TIMEOUT_MS = 120000;
 const COMMAND_TIMEOUT_MS = 60000;
 const PLAN_GENERATION_MAX_TOKENS = 8192;
@@ -156,6 +157,7 @@ export class AutonomousExecutionLoopService extends Disposable implements IAuton
 		@ILogService private readonly logService: ILogService,
 		@IStorageService private readonly storageService: IStorageService,
 		@IWorkspaceContextService private readonly workspaceContext: IWorkspaceContextService,
+		@IFileService private readonly fileService: IFileService,
 	) {
 		super();
 		this.logService.trace('[AutonomousLoop] Initialized');
@@ -720,8 +722,15 @@ Return ONLY the JSON object, no other text.`;
 				// For targeted replacement, use 'modify' with the new content
 				try {
 					// Read current file content via terminal bridge for the transaction
-					const readResult = await this.terminalBridge.executeWithOutputCapture(`cat "${filePath}"`, this._getWorkspaceRoot() || '', 5000);
-					const currentContent = readResult.exitCode === 0 ? readResult.stdout : '';
+						// Phase 31: Read current file content directly via fileService (no cat command)
+						let currentContent = '';
+						try {
+							const uri = URI.file(filePath);
+							const fileContent = await this.fileService.readFile(uri);
+							currentContent = fileContent.value.toString();
+						} catch {
+							currentContent = '';
+						}
 					const updatedContent = currentContent.replace(oldContent, newContent);
 					if (updatedContent === currentContent && oldContent !== newContent) {
 						await this.transactionalEdit.rollbackTransaction(tx.id);
@@ -818,6 +827,12 @@ Return ONLY the JSON object, no other text.`;
 			return { success: false, error: 'Missing operation in git step params' };
 		}
 
+		// Phase 31: Acquire project-level lock for git operations
+		const lockResult = this.executionLock.acquireLock(LockScope.Project, 'git-operation', 'autonomous-loop');
+		if (!lockResult.acquired) {
+			return { success: false, error: `Project locked for git: ${lockResult.reason}` };
+		}
+
 		try {
 			let result: any;
 
@@ -879,6 +894,9 @@ Return ONLY the JSON object, no other text.`;
 			}
 		} catch (e: any) {
 			return { success: false, error: `Git operation error: ${e?.message || String(e)}` };
+		} finally {
+			// Phase 31: Release git operation lock
+			this.executionLock.releaseLock(lockResult.lock!.id);
 		}
 	}
 
@@ -1198,7 +1216,10 @@ Return ONLY the JSON object, no other text.`;
 		let fileContext = '';
 		if (step.params.filePath) {
 			try {
-				const readResult = await this.terminalBridge.executeWithOutputCapture(`cat "${step.params.filePath}"`, this._getWorkspaceRoot() || '', 5000);
+				// Phase 31: Read file content directly via fileService instead of cat command
+			const uri = URI.file(step.params.filePath);
+			const fileContent = await this.fileService.readFile(uri);
+			const readResult = { stdout: fileContent.value.toString(), exitCode: 0 };
 				const fileContent = readResult.exitCode === 0 ? readResult.stdout : '';
 				fileContext = `Current file content (${step.params.filePath}):\n\`\`\`\n${fileContent.substring(0, 8000)}\n\`\`\`\n\n`;
 			} catch {
@@ -1630,7 +1651,7 @@ Explain what went wrong and how your fix addresses it.`;
 				params: st.params || {},
 				status: 'pending' as const,
 				retryCount: 0,
-				maxRetries: st.maxRetries || MAX_STEP_RETRIES,
+				maxRetries: st.maxRetries || 3,
 			}));
 
 			return {
@@ -1690,7 +1711,7 @@ Explain what went wrong and how your fix addresses it.`;
 						},
 						status: 'pending' as const,
 						retryCount: 0,
-						maxRetries: MAX_STEP_RETRIES,
+						maxRetries: 3,
 					},
 					{
 						id: `${milestoneId}-s1`,
@@ -1700,7 +1721,7 @@ Explain what went wrong and how your fix addresses it.`;
 						params: { commands: ['npm run build', 'npm run lint'] },
 						status: 'pending' as const,
 						retryCount: 0,
-						maxRetries: MAX_STEP_RETRIES,
+						maxRetries: 3,
 					},
 				],
 				status: MilestoneStatus.Pending,

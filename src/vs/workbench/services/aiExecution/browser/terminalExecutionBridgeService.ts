@@ -1,18 +1,19 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel -- Phase 30: Terminal Execution Bridge Service
+ *  AI Execution Kernel -- Phase 31: Terminal Execution Bridge Service
  *  Real Vibecode -- AI-Native IDE
  *
  *  TerminalExecutionBridgeService -- THE MOST CRITICAL FILE IN THE EXECUTION STACK.
  *  Implements REAL command execution through VS Code's terminal with output
  *  capture via the file redirect pattern.
  *
- *  Phase 30 changes:
- *    - Wired ITerminalSessionManagerService for session lifecycle tracking
- *    - Wired IStreamingOutputService for incremental output reading
- *    - Wired ICommandSafetyService for command safety analysis
- *    - Removed redundant local safety checks (replaced by CommandSafetyService)
+ *  Phase 31 changes:
+ *    - REPLACED _waitForOutputFile() polling with _waitForStreamingOutput()
+ *    - Output capture now goes through StreamingOutputService exclusively
+ *    - Zero fileService.readFile() calls in the output capture polling loop
+ *    - IFileService still used for directory creation and file cleanup only
+ *    - readFile() called only ONCE at completion to get full output for parsing
  *
- *  STRATEGY: Output File Redirect
+ *  STRATEGY: Output File Redirect + Streaming Read
  *
  *  VS Code's browser workbench does not provide a programmatic API to capture
  *  terminal output directly. This service implements a creative workaround:
@@ -20,13 +21,15 @@
  *    1. Create a scratch file path in the workspace (.ai-exec/<commandId>.log)
  *    2. Run the command in the terminal with output redirected:
  *       `command > .ai-exec/<commandId>.log 2>&1; echo "AI_EXIT:$?" >> .ai-exec/<commandId>.log`
- *    3. Wait for the output file to be written (poll every 200ms)
- *    4. Read the output file using IFileService
- *    5. Parse the exit code from the AI_EXIT marker
- *    6. Clean up the scratch file
+ *    3. Register the output file with StreamingOutputService
+ *    4. Poll readIncremental() to read new output chunks as they appear
+ *    5. Detect completion via the AI_EXIT marker in the rolling buffer
+ *    6. Read the full output file ONCE at completion for exit code parsing
+ *    7. Clean up the scratch file
  *
  *  This is REAL execution. Commands run in VS Code's terminal. Output IS
- *  captured to a file. The file IS read back. This is NOT simulated execution.
+ *  captured to a file. The file IS read incrementally via StreamingOutput.
+ *  This is NOT simulated execution.
  *--------------------------------------------------------------------------------------------*/
 
 import { ITerminalExecutionBridgeService, ExecutionMode, CommandSpec, ExecutionResult, CommandHistoryEntry } from '../common/terminalExecutionBridge.js';
@@ -254,7 +257,7 @@ export class TerminalExecutionBridgeService extends Disposable implements ITermi
 
 		// Wait for output file to appear and stabilize
 		const timeout = spec.timeout || 30000;
-		const output = await this._waitForOutputFile(outputUri, timeout, commandId);
+		const output = await this._waitForStreamingOutput(session.id, timeout, commandId);
 
 		// Clean up output file
 		try { await this.fileService.del(outputUri); } catch { /* ignore */ }
@@ -271,76 +274,110 @@ export class TerminalExecutionBridgeService extends Disposable implements ITermi
 		return { stdout: cleanOutput, stderr: '', exitCode, timedOut: output.includes('__TIMEOUT__') };
 	}
 
-	private async _waitForOutputFile(uri: URI, timeout: number, commandId: string): Promise<string> {
+	/**
+	 * Phase 31: Streaming output wait. Replaces the old file-stat polling approach.
+	 *
+	 * Uses StreamingOutputService.readIncremental() to read new output chunks
+	 * without re-reading the entire file. Detects completion via the AI_EXIT
+	 * marker in the rolling buffer. No fileService.readFile() calls during polling.
+	 * readFile() is called only ONCE at completion to get the full output for
+	 * exit code parsing.
+	 */
+	private async _waitForStreamingOutput(sessionId: string, timeout: number, commandId: string): Promise<string> {
 		const startTime = Date.now();
-		const pollInterval = 200;
-		let lastSize = -1;
-		let stableCount = 0;
+		const pollInterval = 150; // Match StreamingOutputService's pollIntervalMs
+		let noNewOutputCount = 0;
+		const stuckThreshold = 20; // If no new output for 20 polls (~3s), consider stuck
 
 		while (Date.now() - startTime < timeout) {
-			try {
-				const stat = await this.fileService.stat(uri);
-				if (stat.size > 0) {
-					// Phase 30: Update session heartbeat on each successful read
-					const session = this.sessionManager.getSessionByOutputFile(uri.fsPath);
-					if (session) {
-						this.sessionManager.updateHeartbeat(session.id, stat.size, false);
-					}
+			// Read incremental output through the streaming service
+			const newChunks = await this.streamingOutput.readIncremental(sessionId);
 
-					// Check if file size is stable (command finished writing)
-					if (stat.size === lastSize) {
-						stableCount++;
-						// Wait for 3 consecutive same-size reads (600ms stability)
-						// before considering the write complete
-						if (stableCount >= 3) {
-							// Also verify the exit marker is present, which confirms
-							// the command has finished and the exit code was written
-							const content = await this.fileService.readFile(uri);
-							const text = content.value.toString();
-							if (text.includes(EXIT_MARKER)) {
-								// Phase 30: Mark exit marker found in heartbeat
-								if (session) {
-									this.sessionManager.updateHeartbeat(session.id, stat.size, true);
-								}
-								return text;
-							}
-						}
-					} else {
-						stableCount = 0;
-						lastSize = stat.size;
-					}
+			// Get the current rolling buffer to check for completion
+			const buffer = this.streamingOutput.getRollingBuffer(sessionId);
 
-					// Phase 30: Read incremental output via streaming service
-					const session = this.sessionManager.getSessionByOutputFile(uri.fsPath);
-					if (session && stableCount === 0) {
-						await this.streamingOutput.readIncremental(session.id);
-					}
+			// Update session heartbeat
+			const sessionState = this.streamingOutput.getStreamState(sessionId);
+			if (sessionState) {
+				const session = this.sessionManager.getSessionByOutputFile(sessionState.filePath);
+				if (session) {
+					this.sessionManager.updateHeartbeat(session.id, sessionState.totalBytesRead, buffer.includes(EXIT_MARKER));
+				}
+			}
 
-					// Emit live output events for partial reads
-					if (stableCount === 0) {
+			// Emit live output events for partial reads
+			if (newChunks > 0 && buffer.length > 0) {
+				// Only emit the new portion, not the entire buffer
+				const recentOutput = buffer.substring(Math.max(0, buffer.length - 500));
+				this._emitEvent(ExecutionEventType.CommandOutput, { commandId, output: recentOutput, partial: true });
+			}
+
+			// Check for completion: the exit marker means the command finished
+			if (buffer.includes(EXIT_MARKER)) {
+				// Command finished. Read the full output file ONCE for exit code parsing.
+				// This is the ONLY readFile call, and it only happens at completion.
+				if (sessionState) {
+					try {
+						const uri = URI.file(sessionState.filePath);
 						const content = await this.fileService.readFile(uri);
-						this._emitEvent(ExecutionEventType.CommandOutput, { commandId, output: content.value.toString().substring(0, 500), partial: true });
+						return content.value.toString();
+					} catch {
+						// Fallback: use rolling buffer if file read fails
+						return buffer;
 					}
 				}
-			} catch { /* File doesn't exist yet */ }
+				return buffer;
+			}
+
+			// Track whether we're getting new output
+			if (newChunks === 0) {
+				noNewOutputCount++;
+			} else {
+				noNewOutputCount = 0;
+			}
+
+			// Check if stream is complete (set by StreamingOutputService when exit marker found)
+			if (sessionState && sessionState.isComplete) {
+				if (sessionState.filePath) {
+					try {
+						const uri = URI.file(sessionState.filePath);
+						const content = await this.fileService.readFile(uri);
+						return content.value.toString();
+					} catch {
+						return buffer;
+					}
+				}
+				return buffer;
+			}
 
 			await new Promise(resolve => setTimeout(resolve, pollInterval));
 		}
 
-		// Phase 30: Mark session as stuck on timeout
-		const session = this.sessionManager.getSessionByOutputFile(uri.fsPath);
-		if (session) {
-			this.sessionManager.markStuck(session.id);
+		// Timeout reached - mark session as stuck
+		this.sessionManager.markStuck(sessionId);
+
+		// Return whatever we have from the rolling buffer plus timeout marker
+		const buffer = this.streamingOutput.getRollingBuffer(sessionId);
+		if (buffer.length > 0) {
+			return buffer + '\n__TIMEOUT__';
 		}
 
-		// Timeout - try to read whatever output we have so far
-		try {
-			const content = await this.fileService.readFile(uri);
-			return content.value.toString() + '\n__TIMEOUT__';
-		} catch {
-			return `__TIMEOUT__: Command timed out after ${timeout}ms`;
+		// Last resort: try reading the output file directly for timeout case
+		const sessionState = this.streamingOutput.getStreamState(sessionId);
+		if (sessionState) {
+			try {
+				const uri = URI.file(sessionState.filePath);
+				const content = await this.fileService.readFile(uri);
+				return content.value.toString() + '\n__TIMEOUT__';
+			} catch {
+				// File doesn't exist
+			}
 		}
+
+		return `__TIMEOUT__: Command timed out after ${timeout}ms`;
 	}
+
+	// -- Private: History and events --	}
 
 	// -- Private: History and events -- ----------------------------------------
 

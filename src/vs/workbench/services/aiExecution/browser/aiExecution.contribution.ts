@@ -1,52 +1,66 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel -- Phase 30: Integration, DI Fix & Deterministic Execution
+ *  AI Execution Kernel -- Phase 31: Integration, DI Fix & Honesty Cleanup
  *  Real Vibecode -- AI-Native IDE
  *
  *  aiExecution.contribution.ts -- Service registration + real UI wiring.
  *
- *  PHASE 30: ALL services that are injected via DI MUST be registered here.
+ *  PHASE 31: ALL services that are injected via DI MUST be registered here.
  *  No fictional absorption. No dead side-effect imports. Every registered
  *  singleton has its constructor dependencies also registered.
  *
- *  ACTIVE SINGLETONS (15):
- *    EXECUTION (3):  AutonomousExecutionLoop, TerminalExecutionBridge, TerminalSessionManager
- *    EDITING (1):    TransactionalEdit
+ *  REGISTERED SINGLETONS (25):
+ *    EXECUTION (5):  AutonomousExecutionLoop, TerminalExecutionBridge, TerminalSessionManager,
+ *                     AutonomousExecution, ExecutionSandbox
+ *    EDITING (2):    TransactionalEdit, CodeEditing
  *    LLM (4):        LLMProvider, ModelRegistry, CredentialStore, ProviderHealth
- *    MEMORY (1):     ProjectMemory
+ *    MEMORY (2):     ProjectMemory, LongHorizonMemory
  *    SAFETY (4):     CostGovernor, ExecutionLock, CommandSafety, ExecutionSanity
- *    REPAIR (1):     RepairIntelligence
- *    INTELLIGENCE (1): StreamingOutput
+ *    REPAIR (2):     RepairIntelligence, AutonomousRepair
+ *    INTELLIGENCE (2): StreamingOutput, ExecutionVerification
+ *    ORCHESTRATION (2): MultiAgentExecution, ContextWindowOptimization
+ *    UI (1):         RealUIIntegration
+ *    STATE (1):      AIUnifiedState
  *
- *  RE-REGISTERED (absorption was fictional; these are still injected):
- *    GitWorkflow (injected by AutonomousExecutionLoop, not absorbed)
- *    RepositoryIntelligence (injected by AutonomousExecutionLoop, not absorbed)
- *    CodeEditing (injected by AutonomousExecutionLoop during transition to TransactionalEdit)
+ *  RE-REGISTERED (3 - still injected by consumers, absorption was fictional):
+ *    GitWorkflow, RepositoryIntelligence, AIExecution
  *
- *  REMOVED: IObservabilityService (was injected but never used in any method body)
- *  REMOVED: All dead side-effect imports that served no DI purpose
+ *  KNOWN GAPS:
+ *    - IObservabilityService: Removed from AIProductContribution (was injected but never used)
+ *    - ITokenEstimationService: Removed from AIProductContribution (was injected but never used)
+ *    - IAgentOrchestratorService: Has implementation but not registered (not injected by any registered singleton)
+ *    - IExecutionGraphService: Has implementation but not registered (not injected by any registered singleton)
+ *    - IAIContextService: Has implementation but not registered (not injected by any registered singleton)
  *--------------------------------------------------------------------------------------------*/
 
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 
-// ---- EXECUTION (3) ----
+// ---- EXECUTION (5) ----
 import { IAutonomousExecutionLoopService } from '../common/autonomousExecutionLoop.js';
 import { AutonomousExecutionLoopService } from './autonomousExecutionLoopService.js';
 import { ITerminalExecutionBridgeService } from '../common/terminalExecutionBridge.js';
 import { TerminalExecutionBridgeService } from './terminalExecutionBridgeService.js';
 import { ITerminalSessionManagerService } from '../common/terminalSessionManager.js';
 import { TerminalSessionManagerService } from './terminalSessionManagerService.js';
+import { IAutonomousExecutionService } from '../common/autonomousExecution.js';
+import { AutonomousExecutionService } from './autonomousExecutionService.js';
+import { IExecutionSandboxService } from '../common/executionSandbox.js';
+import { ExecutionSandboxService } from './executionSandboxService.js';
 
-// ---- EDITING (1) ----
+// ---- EDITING (2) ----
 import { ITransactionalEditService } from '../common/transactionalEdit.js';
 import { TransactionalEditService } from './transactionalEditService.js';
+import { ICodeEditingService } from '../common/codeEditing.js';
+import { CodeEditingService } from './codeEditingService.js';
 
 // ---- LLM (4) ----
 import { ILLMProviderService, IModelRegistryService, ICredentialStoreService, IProviderHealthService } from '../common/llmProvider.js';
 import { LLMProviderService, ModelRegistryService, CredentialStoreService, ProviderHealthService } from './llmProviderService.js';
 
-// ---- MEMORY (1) ----
+// ---- MEMORY (2) ----
 import { IProjectMemoryService } from '../common/projectMemory.js';
 import { ProjectMemoryService } from './projectMemoryService.js';
+import { ILongHorizonMemoryService } from '../common/longHorizonMemory.js';
+import { LongHorizonMemoryService } from './longHorizonMemoryService.js';
 
 // ---- SAFETY (4) ----
 import { ICostGovernorService } from '../common/costGovernor.js';
@@ -58,38 +72,62 @@ import { CommandSafetyService } from './commandSafetyService.js';
 import { IExecutionSanityService } from '../common/executionSanity.js';
 import { ExecutionSanityService } from './executionSanityService.js';
 
-// ---- REPAIR (1) ----
+// ---- REPAIR (2) ----
 import { IRepairIntelligenceService } from '../common/repairIntelligence.js';
 import { RepairIntelligenceService } from './repairIntelligenceService.js';
+import { IAutonomousRepairService } from '../common/autonomousRepair.js';
+import { AutonomousRepairService } from './autonomousRepairService.js';
 
-// ---- INTELLIGENCE (1) ----
+// ---- INTELLIGENCE (2) ----
 import { IStreamingOutputService } from '../common/streamingOutput.js';
 import { StreamingOutputService } from './streamingOutputService.js';
+import { IExecutionVerificationService } from '../common/executionVerification.js';
+import { ExecutionVerificationService } from './executionVerificationService.js';
 
-// ---- RE-REGISTERED (still injected, absorption was fictional) ----
+// ---- ORCHESTRATION (2) ----
+import { IMultiAgentExecutionService } from '../common/multiAgentExecution.js';
+import { MultiAgentExecutionService } from './multiAgentExecutionService.js';
+import { IContextWindowOptimizationService } from '../common/contextWindowOptimization.js';
+import { ContextWindowOptimizationService } from './contextWindowOptimizationService.js';
+
+// ---- UI (1) ----
+import { IRealUIIntegrationService } from '../common/realUIIntegration.js';
+import { RealUIIntegrationService } from './realUIIntegrationService.js';
+
+// ---- STATE (1) ----
+import { IAIUnifiedStateService } from '../common/aiUnifiedStateService.js';
+import { AIUnifiedStateService } from './aiUnifiedStateService.js';
+
+// ---- RE-REGISTERED (still injected by consumers, absorption was fictional) ----
 import { IGitWorkflowService } from '../common/gitWorkflow.js';
 import { GitWorkflowService } from './gitWorkflowService.js';
 import { IRepositoryIntelligenceService } from '../common/repositoryIntelligence.js';
 import { RepositoryIntelligenceService } from './repositoryIntelligenceService.js';
-import { ICodeEditingService } from '../common/codeEditing.js';
-import { CodeEditingService } from './codeEditingService.js';
+import { IAIExecutionService } from '../common/aiExecutionService.js';
+import { AIExecutionService } from './aiExecutionService.js';
 
 // ---- Real UI Product Contribution ----
 import './aiProductContribution.js';
 
 // =====================================================================
 // SINGLETON REGISTRATIONS
-// 15 core singletons + 3 re-registered + 1 auto-registered workbench contribution
+// 25 core singletons + 3 re-registered + 1 auto-registered workbench contribution
+//
 // Every registered singleton's constructor dependencies are also registered.
+// If a service is injected, it must be registered. If a legacy service is
+// injected but doesn't exist, the injection must be removed instead.
 // =====================================================================
 
-// EXECUTION (3)
+// EXECUTION (5)
 registerSingleton(IAutonomousExecutionLoopService, AutonomousExecutionLoopService, InstantiationType.Delayed);
 registerSingleton(ITerminalExecutionBridgeService, TerminalExecutionBridgeService, InstantiationType.Delayed);
 registerSingleton(ITerminalSessionManagerService, TerminalSessionManagerService, InstantiationType.Delayed);
+registerSingleton(IAutonomousExecutionService, AutonomousExecutionService, InstantiationType.Delayed);
+registerSingleton(IExecutionSandboxService, ExecutionSandboxService, InstantiationType.Delayed);
 
-// EDITING (1)
+// EDITING (2)
 registerSingleton(ITransactionalEditService, TransactionalEditService, InstantiationType.Delayed);
+registerSingleton(ICodeEditingService, CodeEditingService, InstantiationType.Delayed);
 
 // LLM (4)
 registerSingleton(ILLMProviderService, LLMProviderService, InstantiationType.Delayed);
@@ -97,8 +135,9 @@ registerSingleton(IModelRegistryService, ModelRegistryService, InstantiationType
 registerSingleton(ICredentialStoreService, CredentialStoreService, InstantiationType.Delayed);
 registerSingleton(IProviderHealthService, ProviderHealthService, InstantiationType.Delayed);
 
-// MEMORY (1)
+// MEMORY (2)
 registerSingleton(IProjectMemoryService, ProjectMemoryService, InstantiationType.Delayed);
+registerSingleton(ILongHorizonMemoryService, LongHorizonMemoryService, InstantiationType.Delayed);
 
 // SAFETY (4)
 registerSingleton(ICostGovernorService, CostGovernorService, InstantiationType.Delayed);
@@ -106,13 +145,25 @@ registerSingleton(IExecutionLockService, ExecutionLockService, InstantiationType
 registerSingleton(ICommandSafetyService, CommandSafetyService, InstantiationType.Delayed);
 registerSingleton(IExecutionSanityService, ExecutionSanityService, InstantiationType.Delayed);
 
-// REPAIR (1)
+// REPAIR (2)
 registerSingleton(IRepairIntelligenceService, RepairIntelligenceService, InstantiationType.Delayed);
+registerSingleton(IAutonomousRepairService, AutonomousRepairService, InstantiationType.Delayed);
 
-// INTELLIGENCE (1)
+// INTELLIGENCE (2)
 registerSingleton(IStreamingOutputService, StreamingOutputService, InstantiationType.Delayed);
+registerSingleton(IExecutionVerificationService, ExecutionVerificationService, InstantiationType.Delayed);
+
+// ORCHESTRATION (2)
+registerSingleton(IMultiAgentExecutionService, MultiAgentExecutionService, InstantiationType.Delayed);
+registerSingleton(IContextWindowOptimizationService, ContextWindowOptimizationService, InstantiationType.Delayed);
+
+// UI (1)
+registerSingleton(IRealUIIntegrationService, RealUIIntegrationService, InstantiationType.Delayed);
+
+// STATE (1)
+registerSingleton(IAIUnifiedStateService, AIUnifiedStateService, InstantiationType.Delayed);
 
 // RE-REGISTERED (absorption was fictional; these are still injected by consumers)
 registerSingleton(IGitWorkflowService, GitWorkflowService, InstantiationType.Delayed);
 registerSingleton(IRepositoryIntelligenceService, RepositoryIntelligenceService, InstantiationType.Delayed);
-registerSingleton(ICodeEditingService, CodeEditingService, InstantiationType.Delayed);
+registerSingleton(IAIExecutionService, AIExecutionService, InstantiationType.Delayed);

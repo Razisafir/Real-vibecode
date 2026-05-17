@@ -42,7 +42,6 @@ import { registerThemingParticipant } from '../../../../platform/theme/common/th
 // AI service imports (existing backend)
 import { IAIExecutionService } from '../common/aiExecutionService.js';
 import { IAIUnifiedStateService } from '../common/aiUnifiedStateService.js';
-import { IObservabilityService } from '../common/observabilityService.js';
 
 // Phase 25 service imports
 import { ILLMProviderService } from '../common/llmProvider.js';
@@ -50,17 +49,13 @@ import { IProviderHealthService } from '../common/llmProvider.js';
 import { ICredentialStoreService } from '../common/llmProvider.js';
 import { IProjectMemoryService, MemoryType, MemoryPriority, CheckpointType } from '../common/projectMemory.js';
 import { IAutonomousExecutionService, ExecutionStage, ApprovalMode } from '../common/autonomousExecution.js';
-import { IExecutionSandboxService } from '../common/executionSandbox.js';
-import { ITokenEstimationService } from '../common/tokenEstimation.js';
 import { IRealUIIntegrationService, AITheme } from '../common/realUIIntegration.js';
 
 // Phase 27 service imports
 import { IRepositoryIntelligenceService } from '../common/repositoryIntelligence.js';
 import { ICodeEditingService } from '../common/codeEditing.js';
 import { IGitWorkflowService } from '../common/gitWorkflow.js';
-import { IAutonomousRepairService } from '../common/autonomousRepair.js';
 import { IExecutionVerificationService } from '../common/executionVerification.js';
-import { IMultiAgentExecutionService } from '../common/multiAgentExecution.js';
 import { ILongHorizonMemoryService } from '../common/longHorizonMemory.js';
 import { IContextWindowOptimizationService } from '../common/contextWindowOptimization.js';
 
@@ -562,23 +557,18 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                 @IWebviewViewService private readonly webviewViewService: IWebviewViewService,
                 @IAIExecutionService private readonly executionService: IAIExecutionService,
                 @IAIUnifiedStateService private readonly stateService: IAIUnifiedStateService,
-                @IObservabilityService private readonly observabilityService: IObservabilityService,
                 // Phase 25 services
                 @ILLMProviderService private readonly llmProviderService: ILLMProviderService,
                 @IProviderHealthService private readonly providerHealthService: IProviderHealthService,
                 @ICredentialStoreService private readonly credentialStoreService: ICredentialStoreService,
                 @IProjectMemoryService private readonly projectMemoryService: IProjectMemoryService,
                 @IAutonomousExecutionService private readonly autonomousExecutionService: IAutonomousExecutionService,
-                @IExecutionSandboxService private readonly executionSandboxService: IExecutionSandboxService,
-                @ITokenEstimationService private readonly tokenEstimationService: ITokenEstimationService,
                 @IRealUIIntegrationService private readonly realUIIntegrationService: IRealUIIntegrationService,
                 // Phase 27 services
                 @IRepositoryIntelligenceService private readonly repositoryIntelligenceService: IRepositoryIntelligenceService,
                 @ICodeEditingService private readonly codeEditingService: ICodeEditingService,
                 @IGitWorkflowService private readonly gitWorkflowService: IGitWorkflowService,
-                @IAutonomousRepairService private readonly autonomousRepairService: IAutonomousRepairService,
                 @IExecutionVerificationService private readonly executionVerificationService: IExecutionVerificationService,
-                @IMultiAgentExecutionService private readonly multiAgentExecutionService: IMultiAgentExecutionService,
                 @ILongHorizonMemoryService private readonly longHorizonMemoryService: ILongHorizonMemoryService,
                 @IContextWindowOptimizationService private readonly contextWindowOptimizationService: IContextWindowOptimizationService,
                 // Phase 28 services
@@ -587,7 +577,7 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
         ) {
                 super();
 
-                this.logService.info('[AIProduct] Initializing real UI wiring with Phase 25 services');
+                this.logService.info('[AIProduct] Initializing real UI wiring with Phase 31 DI fixes');
 
                 // 1. Inject CSS design tokens into the DOM immediately
                 this.injectCSS();
