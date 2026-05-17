@@ -1,64 +1,40 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel -- Repository Intelligence, Code Execution & Long-Horizon Autonomy
+ *  AI Execution Kernel -- Real Execution Bridge, Terminal Control & True Autonomous Loop
  *  Real Vibecode -- AI-Native IDE
  *
  *  aiExecution.contribution.ts -- Service registration + real UI wiring.
  *
- *  PHASE 27 REDUCTION: From 19 to 14 registered singletons.
+ *  PHASE 28 REDUCTION: From 14 to 9 registered singletons.
  *
- *  MERGED IN PHASE 27 (5 services removed as separate singletons):
- *    - ModelRegistry: Merged into LLMProviderService
- *    - CredentialStore: Merged into LLMProviderService
- *    - Streaming: Merged into LLMProviderService
- *    - ProviderHealth: Merged into LLMProviderService
- *    - MemoryCompaction: Merged into ProjectMemoryService
- *    - ExecutionTimeline: Merged into ProjectMemoryService
- *    - ExecutionQueue: Merged into AutonomousExecutionService
- *    - TokenEstimation: Merged into AIContextService
+ *  MERGED IN PHASE 28 (6 services removed as separate singletons):
+ *    - ExecutionGraph: Absorbed by AutonomousExecutionLoopService
+ *    - AIUnifiedState: Absorbed by ProjectMemoryService
+ *    - AIExecution: Absorbed by AutonomousExecutionLoopService
+ *    - AgentOrchestrator: Absorbed by AutonomousExecutionLoopService
+ *    - ExecutionSandbox: Absorbed by AutonomousExecutionLoopService
+ *    - AIContext: Absorbed by ProjectMemoryService
  *
- *  NEW IN PHASE 27 (3 services):
- *    - RepositoryIntelligenceService
- *    - CodeEditingService
- *    - GitWorkflowService
+ *  NEW IN PHASE 28 (2 services):
+ *    - TerminalExecutionBridgeService: Real command execution via VS Code terminal
+ *    - AutonomousExecutionLoopService: Unified autonomous execution loop
  *
- *  CONSUMED INTERNALLY (5 services, not registered as singletons):
- *    - LongHorizonMemoryService: Consumed by ProjectMemoryService
- *    - AutonomousRepairService: Consumed by AutonomousExecutionService
- *    - ExecutionVerificationService: Consumed by AIExecutionService
- *    - MultiAgentExecutionService: Consumed by AgentOrchestratorService
- *    - ContextWindowOptimizationService: Consumed by AIContextService
- *
- *  ACTIVE SERVICES (14):
- *    CORE (3): ExecutionGraph, UnifiedState, Observability
- *    EXECUTION (2): AIExecution, AgentOrchestrator
- *    CONTEXT (1): AIContext
+ *  ACTIVE SERVICES (9):
+ *    EXECUTION (2): AutonomousExecutionLoop, TerminalExecutionBridge
  *    LLM (1): LLMProvider
  *    MEMORY (1): ProjectMemory
- *    AUTONOMY (2): AutonomousExecution, ExecutionSandbox
  *    REPOSITORY (2): RepositoryIntelligence, CodeEditing
  *    GIT (1): GitWorkflow
+ *    OBSERVABILITY (1): Observability
  *    UI (1): RealUIIntegration
  *--------------------------------------------------------------------------------------------*/
 
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 
-// ---- CORE (3) ----
-import { IExecutionGraphService } from '../common/executionGraphService.js';
-import { ExecutionGraphService } from './executionGraphService.js';
-import { IAIUnifiedStateService } from '../common/aiUnifiedStateService.js';
-import { AIUnifiedStateService } from './aiUnifiedStateService.js';
-import { IObservabilityService } from '../common/observabilityService.js';
-import { ObservabilityService } from './observabilityService.js';
-
 // ---- EXECUTION (2) ----
-import { IAIExecutionService } from '../common/aiExecutionService.js';
-import { AIExecutionService } from './aiExecutionService.js';
-import { IAgentOrchestratorService } from '../common/agentOrchestratorService.js';
-import { AgentOrchestratorService } from './agentOrchestratorService.js';
-
-// ---- CONTEXT (1) ----
-import { IAIContextService } from '../common/aiContextService.js';
-import { AIContextService } from './aiContextService.js';
+import { IAutonomousExecutionLoopService } from '../common/autonomousExecutionLoop.js';
+import { AutonomousExecutionLoopService } from './autonomousExecutionLoopService.js';
+import { ITerminalExecutionBridgeService } from '../common/terminalExecutionBridge.js';
+import { TerminalExecutionBridgeService } from './terminalExecutionBridgeService.js';
 
 // ---- LLM (1) ----
 import { ILLMProviderService } from '../common/llmProvider.js';
@@ -67,12 +43,6 @@ import { LLMProviderService } from './llmProviderService.js';
 // ---- MEMORY (1) ----
 import { IProjectMemoryService } from '../common/projectMemory.js';
 import { ProjectMemoryService } from './projectMemoryService.js';
-
-// ---- AUTONOMY (2) ----
-import { IAutonomousExecutionService } from '../common/autonomousExecution.js';
-import { AutonomousExecutionService } from './autonomousExecutionService.js';
-import { IExecutionSandboxService } from '../common/executionSandbox.js';
-import { ExecutionSandboxService } from './executionSandboxService.js';
 
 // ---- REPOSITORY (2) ----
 import { IRepositoryIntelligenceService } from '../common/repositoryIntelligence.js';
@@ -84,36 +54,40 @@ import { CodeEditingService } from './codeEditingService.js';
 import { IGitWorkflowService } from '../common/gitWorkflow.js';
 import { GitWorkflowService } from './gitWorkflowService.js';
 
+// ---- OBSERVABILITY (1) ----
+import { IObservabilityService } from '../common/observabilityService.js';
+import { ObservabilityService } from './observabilityService.js';
+
 // ---- UI (1) ----
 import { IRealUIIntegrationService } from '../common/realUIIntegration.js';
 import { RealUIIntegrationService } from './realUIIntegrationService.js';
 
-// ---- Consumed internally (not registered as singletons) ----
+// ---- Consumed internally (side-effect imports for module loading) ----
 import './longHorizonMemoryService.js';
 import './autonomousRepairService.js';
 import './executionVerificationService.js';
 import './multiAgentExecutionService.js';
 import './contextWindowOptimizationService.js';
+import './executionGraphService.js';
+import './aiUnifiedStateService.js';
+import './aiExecutionService.js';
+import './agentOrchestratorService.js';
+import './executionSandboxService.js';
+import './aiContextService.js';
+import './autonomousExecutionService.js';
+import './tokenEstimationService.js';
 
 // ---- Real UI Product Contribution ----
 import './aiProductContribution.js';
 
 // =====================================================================
 // SINGLETON REGISTRATIONS
-// 14 core services + 1 auto-registered workbench contribution
+// 9 core services + 1 auto-registered workbench contribution
 // =====================================================================
 
-// CORE (3)
-registerSingleton(IExecutionGraphService, ExecutionGraphService, InstantiationType.Delayed);
-registerSingleton(IAIUnifiedStateService, AIUnifiedStateService, InstantiationType.Delayed);
-registerSingleton(IObservabilityService, ObservabilityService, InstantiationType.Delayed);
-
 // EXECUTION (2)
-registerSingleton(IAIExecutionService, AIExecutionService, InstantiationType.Delayed);
-registerSingleton(IAgentOrchestratorService, AgentOrchestratorService, InstantiationType.Delayed);
-
-// CONTEXT (1)
-registerSingleton(IAIContextService, AIContextService, InstantiationType.Delayed);
+registerSingleton(IAutonomousExecutionLoopService, AutonomousExecutionLoopService, InstantiationType.Delayed);
+registerSingleton(ITerminalExecutionBridgeService, TerminalExecutionBridgeService, InstantiationType.Delayed);
 
 // LLM (1)
 registerSingleton(ILLMProviderService, LLMProviderService, InstantiationType.Delayed);
@@ -121,16 +95,15 @@ registerSingleton(ILLMProviderService, LLMProviderService, InstantiationType.Del
 // MEMORY (1)
 registerSingleton(IProjectMemoryService, ProjectMemoryService, InstantiationType.Delayed);
 
-// AUTONOMY (2)
-registerSingleton(IAutonomousExecutionService, AutonomousExecutionService, InstantiationType.Delayed);
-registerSingleton(IExecutionSandboxService, ExecutionSandboxService, InstantiationType.Delayed);
-
 // REPOSITORY (2)
 registerSingleton(IRepositoryIntelligenceService, RepositoryIntelligenceService, InstantiationType.Delayed);
 registerSingleton(ICodeEditingService, CodeEditingService, InstantiationType.Delayed);
 
 // GIT (1)
 registerSingleton(IGitWorkflowService, GitWorkflowService, InstantiationType.Delayed);
+
+// OBSERVABILITY (1)
+registerSingleton(IObservabilityService, ObservabilityService, InstantiationType.Delayed);
 
 // UI (1)
 registerSingleton(IRealUIIntegrationService, RealUIIntegrationService, InstantiationType.Delayed);

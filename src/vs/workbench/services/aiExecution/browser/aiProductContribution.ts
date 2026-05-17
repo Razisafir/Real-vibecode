@@ -64,6 +64,11 @@ import { IMultiAgentExecutionService } from '../common/multiAgentExecution.js';
 import { ILongHorizonMemoryService } from '../common/longHorizonMemory.js';
 import { IContextWindowOptimizationService } from '../common/contextWindowOptimization.js';
 
+// Phase 28 service imports
+import { IAutonomousExecutionLoopService, LoopState } from '../common/autonomousExecutionLoop.js';
+import { ITerminalExecutionBridgeService } from '../common/terminalExecutionBridge.js';
+import { ExecutionEventType, ExecutionEvent } from '../common/executionEvents.js';
+
 // Webview HTML content
 import { getAIWorkflowHTML } from './aiWorkflowContent.js';
 
@@ -322,6 +327,41 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
                         description: 'Block execution when lint verification fails',
                         scope: ConfigurationScope.APPLICATION,
                 },
+                'aiExecution.terminalOutputCapture': {
+                        type: 'string',
+                        enum: ['fileRedirect', 'terminalService', 'commandService'],
+                        default: 'fileRedirect',
+                        description: 'Method for capturing terminal command output',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.terminalCommandTimeout': {
+                        type: 'number',
+                        default: 30000,
+                        minimum: 5000,
+                        maximum: 300000,
+                        description: 'Default timeout for terminal commands in milliseconds',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.autonomousLoop.maxRepairAttempts': {
+                        type: 'number',
+                        default: 3,
+                        minimum: 1,
+                        maximum: 10,
+                        description: 'Maximum repair attempts per step before escalation',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.autonomousLoop.autoCheckpoint': {
+                        type: 'boolean',
+                        default: true,
+                        description: 'Automatically create git checkpoints after each milestone',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.crashRecovery.autoRestore': {
+                        type: 'boolean',
+                        default: true,
+                        description: 'Automatically offer to restore from crash recovery state on startup',
+                        scope: ConfigurationScope.APPLICATION,
+                },
         },
 });
 
@@ -541,6 +581,9 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                 @IMultiAgentExecutionService private readonly multiAgentExecutionService: IMultiAgentExecutionService,
                 @ILongHorizonMemoryService private readonly longHorizonMemoryService: ILongHorizonMemoryService,
                 @IContextWindowOptimizationService private readonly contextWindowOptimizationService: IContextWindowOptimizationService,
+                // Phase 28 services
+                @IAutonomousExecutionLoopService private readonly executionLoopService: IAutonomousExecutionLoopService,
+                @ITerminalExecutionBridgeService private readonly terminalBridgeService: ITerminalExecutionBridgeService,
         ) {
                 super();
 
@@ -563,6 +606,9 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
 
                 // 6. Wire Phase 27 service events to the webview
                 this.wirePhase27ServiceEvents();
+
+                // 7. Wire Phase 28 service events to the webview
+                this.wirePhase28ServiceEvents();
 
                 this.logService.info('[AIProduct] UI wiring complete. Views registered, CSS injected, webview resolvers active, Phase 25 services wired.');
         }
@@ -775,6 +821,70 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                         }
                         case 'optimizeContext': {
                                 this.handleOptimizeContext(msg.files, msg.maxTokens, msg.currentTask);
+                                break;
+                        }
+                        case 'startAutonomousLoop': {
+                                const plan = msg.plan;
+                                if (plan) {
+                                        this.executionLoopService.start(plan).catch(err => {
+                                                this.logService.error('[AIProduct] Autonomous loop start failed:', err);
+                                        });
+                                }
+                                break;
+                        }
+                        case 'pauseLoop': {
+                                this.executionLoopService.pause();
+                                break;
+                        }
+                        case 'resumeLoop': {
+                                this.executionLoopService.resume();
+                                break;
+                        }
+                        case 'stopLoop': {
+                                this.executionLoopService.stop();
+                                break;
+                        }
+                        case 'retryStep': {
+                                this.executionLoopService.retryCurrentStep().catch(err => {
+                                        this.logService.error('[AIProduct] Retry failed:', err);
+                                });
+                                break;
+                        }
+                        case 'rollbackCheckpoint': {
+                                this.executionLoopService.rollbackToLastCheckpoint().then(success => {
+                                        this.postToWebview({ type: 'rollbackResult', success });
+                                });
+                                break;
+                        }
+                        case 'getLoopState': {
+                                const state = this.executionLoopService.getState();
+                                const progress = this.executionLoopService.getProgress();
+                                const currentMilestone = this.executionLoopService.getCurrentMilestone();
+                                const currentStep = this.executionLoopService.getCurrentStep();
+                                const repairStats = this.executionLoopService.getRepairStats();
+                                this.postToWebview({ type: 'loopState', state, progress, currentMilestone, currentStep, repairStats });
+                                break;
+                        }
+                        case 'executeCommand': {
+                                const { command, cwd, timeout } = msg;
+                                this.terminalBridgeService.executeWithOutputCapture(command, cwd, timeout).then(result => {
+                                        this.postToWebview({ type: 'commandResult', result });
+                                }).catch(err => {
+                                        this.postToWebview({ type: 'commandResult', result: { success: false, exitCode: -1, stdout: '', stderr: String(err), duration: 0, timedOut: false, command, timestamp: Date.now(), mode: 'commandService' } });
+                                });
+                                break;
+                        }
+                        case 'checkCrashRecovery': {
+                                const hasRecovery = this.executionLoopService.hasCrashRecoveryState();
+                                if (hasRecovery) {
+                                        this.postToWebview({ type: 'crashRecoveryAvailable', hasRecovery: true });
+                                }
+                                break;
+                        }
+                        case 'restoreFromCrash': {
+                                this.executionLoopService.restoreCrashRecoveryState().then(success => {
+                                        this.postToWebview({ type: 'crashRecoveryResult', success });
+                                });
                                 break;
                         }
                         case 'getState': {
@@ -1197,6 +1307,45 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                 }));
 
                 this.logService.info('[AIProduct] Phase 27 service events wired');
+        }
+
+        // =================================================================================
+        // PHASE 28 SERVICE EVENT WIRING
+        // Wires the autonomous execution loop and terminal bridge events to the webview.
+        // =================================================================================
+
+        private wirePhase28ServiceEvents(): void {
+                // Wire loop state changes to webview
+                this._register(this.executionLoopService.onStateChange((state: LoopState) => {
+                        this.postToWebview({ type: 'loopStateChange', state });
+                }));
+
+                // Wire milestone updates
+                this._register(this.executionLoopService.onMilestoneUpdate((milestone: any) => {
+                        this.postToWebview({ type: 'milestoneUpdate', milestone });
+                }));
+
+                // Wire step updates
+                this._register(this.executionLoopService.onStepUpdate((step: any) => {
+                        this.postToWebview({ type: 'stepUpdate', step });
+                }));
+
+                // Wire repair attempts
+                this._register(this.executionLoopService.onRepairAttempt((repair: any) => {
+                        this.postToWebview({ type: 'repairAttempt', repair });
+                }));
+
+                // Wire terminal bridge events
+                this._register(this.terminalBridgeService.onExecutionEvent((event: ExecutionEvent) => {
+                        this.postToWebview({ type: 'executionEvent', event });
+                }));
+
+                // Check for crash recovery on startup
+                if (this.executionLoopService.hasCrashRecoveryState()) {
+                        this.postToWebview({ type: 'crashRecoveryAvailable', hasRecovery: true });
+                }
+
+                this.logService.info('[AIProduct] Phase 28 service events wired');
         }
 
         // =================================================================================
