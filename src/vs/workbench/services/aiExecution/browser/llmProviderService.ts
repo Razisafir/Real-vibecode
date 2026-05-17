@@ -16,9 +16,8 @@
  */
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
+import { Emitter } from '../../../../base/common/event.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
-import { IStorageService } from '../../../../platform/storage/common/storage.js';
 import { ISecretStorageService } from '../../../../platform/secrets/common/secrets.js';
 import { CancellationTokenSource } from '../../../../base/common/cancellation.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
@@ -26,13 +25,13 @@ import { generateUuid } from '../../../../base/common/uuid.js';
 import {
         ILLMProviderService, IModelRegistryService, ICredentialStoreService,
         ILLMStreamingService, IProviderHealthService,
-        LLMProviderConfig, ModelInfo, ProviderCredential, LLMRequest, LLMResponse,
-        LLMMessage, LLMTokenUsage, LLMToolCall, StreamChunk, StreamChunkType,
+        LLMProviderConfig, ModelInfo, LLMRequest, LLMResponse,
+        LLMMessage, StreamChunk, StreamChunkType,
         ProviderConnectionStatus, ProviderHealth, HealthSeverity,
-        FallbackChainConfig, FallbackBehavior, ProviderStatusChangeEvent, StreamChunkEvent,
+        FallbackChainConfig, FallbackBehavior,
         KNOWN_PROVIDER_CONFIGS, KNOWN_MODELS,
 } from '../common/llmProvider.js';
-import { ICostGovernorService, CostRecord } from '../common/costGovernor.js';
+import { ICostGovernorService } from '../common/costGovernor.js';
 
 // =====================================================================
 // BudgetExceededError -- Specific error for budget-exceeded fallback

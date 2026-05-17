@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------
- *  AI Execution Kernel -- Phase 32: Critical Bug Fixes, Consistency Cleanup & Smoke Test
+ *  AI Execution Kernel -- Phase 33: Real Smoke Tests, Dead Import Cleanup & Execution Loop Reality Check
  *  Real Vibecode -- AI-Native IDE
  *
  *  aiExecution.contribution.ts -- Service registration + real UI wiring.
