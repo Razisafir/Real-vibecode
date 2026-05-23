@@ -61,7 +61,7 @@ import { IRepositoryIntelligenceService } from '../common/repositoryIntelligence
 import { ICodeEditingService } from '../common/codeEditing.js';
 import { IGitWorkflowService } from '../common/gitWorkflow.js';
 import { IExecutionVerificationService } from '../common/executionVerification.js';
-import { ILongHorizonMemoryService } from '../common/longHorizonMemory.js';
+import { ILongHorizonMemoryService, MemoryCategory, MemoryImportance, CompressedMemory } from '../common/longHorizonMemory.js';
 import { IContextWindowOptimizationService } from '../common/contextWindowOptimization.js';
 
 // Phase 28 service imports
@@ -99,7 +99,7 @@ import { IQuickInputService } from '../../../../platform/quickinput/common/quick
 import { ILLMStreamingService, LLMRequest, LLMMessage, KNOWN_PROVIDER_CONFIGS } from '../common/llmProvider.js';
 
 // Execution graph for Knowledge Graph data source
-import { IExecutionGraphService, IExecutionNode, ExecutionNodeType } from '../common/executionGraphService.js';
+import { IExecutionGraphService, IExecutionNode, IExecutionEdge, IExecutionScope, ExecutionNodeType } from '../common/executionGraphService.js';
 
 // =====================================================================================
 // CONSTANTS
@@ -863,8 +863,26 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
 
                                 // Fetch live graph data from ExecutionGraphService and render
                                 const nodes = this.executionService.getRecentNodes?.(1000) ?? [];
-                                const edges: any[] = [];
-                                const scopes: any[] = [];
+
+                                // Fetch edges: collect outgoing edges from each node in the graph
+                                let edges: IExecutionEdge[] = [];
+                                try {
+                                        const allEdges: IExecutionEdge[] = [];
+                                        for (const node of nodes) {
+                                                allEdges.push(...this.executionGraphService.getOutgoingEdges(node.id));
+                                        }
+                                        edges = allEdges;
+                                } catch { /* best effort */ }
+
+                                // Fetch scopes: use activeScope if available
+                                let scopes: IExecutionScope[] = [];
+                                try {
+                                        const active = this.executionGraphService.activeScope;
+                                        if (active) {
+                                                scopes.push(active);
+                                        }
+                                } catch { /* best effort */ }
+
                                 webviewView.webview.html = this.knowledgeGraphVisualizationService.renderGraph(nodes, edges, scopes);
 
                                 // Handle postMessage from the knowledge graph webview
@@ -873,9 +891,22 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                                                 this.knowledgeGraphVisualizationService.handleWebviewMessage(msg);
                                                 this.logService.info(`[AIProduct] Knowledge graph node selected: ${msg.nodeId}`);
                                         } else if (msg.type === 'refreshGraph') {
-                                                // Re-render with fresh data
+                                                // Re-render with fresh data (including edges and scopes)
                                                 const freshNodes = this.executionService.getRecentNodes?.(1000) ?? [];
-                                                webviewView.webview.html = this.knowledgeGraphVisualizationService.renderGraph(freshNodes, [], []);
+                                                let freshEdges: IExecutionEdge[] = [];
+                                                try {
+                                                        const collected: IExecutionEdge[] = [];
+                                                        for (const node of freshNodes) {
+                                                                collected.push(...this.executionGraphService.getOutgoingEdges(node.id));
+                                                        }
+                                                        freshEdges = collected;
+                                                } catch { /* best effort */ }
+                                                let freshScopes: IExecutionScope[] = [];
+                                                try {
+                                                        const active = this.executionGraphService.activeScope;
+                                                        if (active) { freshScopes.push(active); }
+                                                } catch { /* best effort */ }
+                                                webviewView.webview.html = this.knowledgeGraphVisualizationService.renderGraph(freshNodes, freshEdges, freshScopes);
                                         }
                                 });
 
@@ -883,7 +914,20 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                                 if (this.executionService.onDidExecutionChange) {
                                         this._register(this.executionService.onDidExecutionChange(() => {
                                                 const freshNodes = this.executionService.getRecentNodes?.(1000) ?? [];
-                                                const freshHTML = this.knowledgeGraphVisualizationService.renderGraph(freshNodes, [], []);
+                                                let freshEdges: IExecutionEdge[] = [];
+                                                try {
+                                                        const collected: IExecutionEdge[] = [];
+                                                        for (const node of freshNodes) {
+                                                                collected.push(...this.executionGraphService.getOutgoingEdges(node.id));
+                                                        }
+                                                        freshEdges = collected;
+                                                } catch { /* best effort */ }
+                                                let freshScopes: IExecutionScope[] = [];
+                                                try {
+                                                        const active = this.executionGraphService.activeScope;
+                                                        if (active) { freshScopes.push(active); }
+                                                } catch { /* best effort */ }
+                                                const freshHTML = this.knowledgeGraphVisualizationService.renderGraph(freshNodes, freshEdges, freshScopes);
                                                 webviewView.webview.html = freshHTML;
                                         }));
                                 }
@@ -2237,24 +2281,97 @@ body { font-family: var(--vscode-font-family); margin: 0; padding: 8px; backgrou
         // =================================================================================
 
         private getMemoryVisualizationHTML(): string {
-                // Build sample data from the real project memory service
-                const memoryData = this.realUIIntegrationService.getMemoryDashboardData();
-                const entries: MemoryEntry[] = memoryData.entryTypes.map((et: { type: string; count: number }, i: number) => ({
-                        id: `mem-${i}`,
-                        type: et.type,
-                        content: `${et.count} ${et.type} entries in project memory`,
-                        priority: (i === 0 ? 'high' : i < 3 ? 'medium' : 'low') as MemoryEntry['priority'],
-                        tags: [et.type, 'project'],
-                        tokenCount: et.count * 150,
-                        createdAt: Date.now() - (i * 3600000),
-                        updatedAt: Date.now(),
-                        relevanceScore: Math.max(0, 1 - i * 0.15),
-                }));
+                // Try to fetch real memory entries from IProjectMemoryService first
+                let entries: MemoryEntry[] = [];
+                let usedTokens = 0;
+                let usedTokensFromService = false;
+
+                try {
+                        // Query all entries from the project memory service
+                        const queryResult = this.projectMemoryService.query(() => true);
+                        if (queryResult.entries.length > 0) {
+                                entries = queryResult.entries.map((me) => {
+                                        // Map MemoryPriority enum to visualization priority string
+                                        let priority: MemoryEntry['priority'] = 'medium';
+                                        if (me.priority >= MemoryPriority.Critical) { priority = 'critical'; }
+                                        else if (me.priority >= MemoryPriority.High) { priority = 'high'; }
+                                        else if (me.priority >= MemoryPriority.Medium) { priority = 'medium'; }
+                                        else { priority = 'low'; }
+
+                                        return {
+                                                id: me.id,
+                                                type: me.type,
+                                                content: me.value.length > 200 ? me.value.substring(0, 200) + '…' : me.value,
+                                                priority,
+                                                tags: me.tags,
+                                                tokenCount: me.tokenCount,
+                                                createdAt: me.createdAt,
+                                                updatedAt: me.updatedAt,
+                                                relevanceScore: me.accessCount > 0 ? Math.min(1, me.accessCount / 10) : 0.5,
+                                        };
+                                });
+                                usedTokens = this.projectMemoryService.getTotalTokenCount();
+                                usedTokensFromService = true;
+                        }
+                } catch { /* best effort — fall through to synthetic data */ }
+
+                // If no real entries, also try ILongHorizonMemoryService for architecture memories
+                if (entries.length === 0) {
+                        try {
+                                this.longHorizonMemoryService.getArchitectureMemory().then((archMemories: CompressedMemory[]) => {
+                                        if (archMemories.length > 0) {
+                                                entries = archMemories.map((cm) => {
+                                                        let priority: MemoryEntry['priority'] = 'medium';
+                                                        if (cm.importance === MemoryImportance.Critical) { priority = 'critical'; }
+                                                        else if (cm.importance === MemoryImportance.High) { priority = 'high'; }
+                                                        else if (cm.importance === MemoryImportance.Low || cm.importance === MemoryImportance.Deprecated) { priority = 'low'; }
+
+                                                        return {
+                                                                id: cm.id,
+                                                                type: cm.category,
+                                                                content: cm.summary,
+                                                                priority,
+                                                                tags: cm.keyFacts,
+                                                                tokenCount: cm.tokenCount,
+                                                                createdAt: cm.createdAt,
+                                                                updatedAt: cm.lastAccessedAt,
+                                                                relevanceScore: cm.accessCount > 0 ? Math.min(1, cm.accessCount / 10) : 0.5,
+                                                                isCompacted: cm.compressionRatio < 1,
+                                                        };
+                                                });
+                                        }
+                                }).catch(() => { /* best effort */ });
+                        } catch { /* best effort */ }
+                }
+
+                // Fallback: synthetic data from dashboard if real services returned nothing
+                if (entries.length === 0) {
+                        const memoryData = this.realUIIntegrationService.getMemoryDashboardData();
+                        entries = memoryData.entryTypes.map((et: { type: string; count: number }, i: number) => ({
+                                id: `mem-${i}`,
+                                type: et.type,
+                                content: `${et.count} ${et.type} entries in project memory`,
+                                priority: (i === 0 ? 'high' : i < 3 ? 'medium' : 'low') as MemoryEntry['priority'],
+                                tags: [et.type, 'project'],
+                                tokenCount: et.count * 150,
+                                createdAt: Date.now() - (i * 3600000),
+                                updatedAt: Date.now(),
+                                relevanceScore: Math.max(0, 1 - i * 0.15),
+                        }));
+                        if (!usedTokensFromService) {
+                                usedTokens = memoryData.totalTokens;
+                        }
+                }
+
+                if (!usedTokensFromService && usedTokens === 0) {
+                        const memoryData = this.realUIIntegrationService.getMemoryDashboardData();
+                        usedTokens = memoryData.totalTokens;
+                }
 
                 const budget: TokenBudget = {
-                        used: memoryData.totalTokens,
+                        used: usedTokens,
                         total: 50000,
-                        percentage: memoryData.totalTokens > 0 ? (memoryData.totalTokens / 50000) * 100 : 0,
+                        percentage: usedTokens > 0 ? (usedTokens / 50000) * 100 : 0,
                 };
 
                 return this.memoryVisualizationService.renderMemoryOverview(entries, budget);
