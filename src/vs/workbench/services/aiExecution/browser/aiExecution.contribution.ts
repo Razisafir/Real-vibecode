@@ -136,6 +136,10 @@ import { CostGovernorDashboardService } from './costGovernorDashboard.js';
 import { IPlaywrightBrowserService } from './playwrightBrowserService.js';
 import { PlaywrightBrowserService } from './playwrightBrowserService.js';
 
+// ---- VOICE INPUT (1) — Speech-to-text for AI commands via Web Speech API ----
+import { IVoiceInputService } from '../common/voiceInput.js';
+import { VoiceInputService } from './voiceInputService.js';
+
 // ---- Real UI Product Contribution ----
 import './aiProductContribution.js';
 
@@ -155,6 +159,10 @@ import './aiServiceErrorHandler.js';
 // AI-driven git operations: AI Commit, AI Branch, AI PR
 // Uses IGitWorkflowService, IRepositoryIntelligenceService, and ILLMProviderService
 import './gitAIContribution.js';
+
+// ---- Voice Input Contribution ----
+// Registers Ctrl+Shift+V keybinding, status bar indicator, and text insertion
+import './voiceInputContribution.js';
 
 // =====================================================================
 // SINGLETON REGISTRATIONS
@@ -230,3 +238,6 @@ registerSingleton(ICostGovernorDashboardService, CostGovernorDashboardService, I
 
 // BROWSER AUTOMATION (1) — Playwright + fetch fallback for web research and URL browsing
 registerSingleton(IPlaywrightBrowserService, PlaywrightBrowserService, InstantiationType.Eager);
+
+// VOICE INPUT (1) — Speech-to-text for AI commands via Web Speech API
+registerSingleton(IVoiceInputService, VoiceInputService, InstantiationType.Eager);
