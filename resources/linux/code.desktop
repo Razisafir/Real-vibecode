@@ -1,18 +1,18 @@
 [Desktop Entry]
-Name=Real Vibecode
+Name=VibeCode
 Comment=AI-Native Code Editing. Redefined.
 GenericName=Text Editor
-Exec=real-vibecode %F
-Icon=real-vibecode
+Exec=vibecode %F
+Icon=vibecode
 Type=Application
 StartupNotify=false
-StartupWMClass=Real Vibecode
+StartupWMClass=VibeCode
 Categories=TextEditor;Development;IDE;
-MimeType=application/x-real-vibecode-workspace;
+MimeType=application/x-vibecode-workspace;
 Actions=new-empty-window;
-Keywords=real-vibecode;ai;editor;
+Keywords=vibecode;ai;editor;
 
 [Desktop Action new-empty-window]
 Name=New Empty Window
-Exec=real-vibecode --new-window %F
-Icon=real-vibecode
+Exec=vibecode --new-window %F
+Icon=vibecode

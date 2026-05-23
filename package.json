@@ -1,9 +1,9 @@
 {
-  "name": "real-vibecode",
+  "name": "vibecode",
   "version": "1.121.1",
   "distro": "9897f32f1899b7b2c8e5d0701c5d99458bb8de9e",
   "author": {
-    "name": "Real Vibecode Project"
+    "name": "VibeCode Project"
   },
   "license": "Proprietary - Free to Use",
   "description": "AI-native IDE built on VS Code with multi-provider LLM support and autonomous execution",

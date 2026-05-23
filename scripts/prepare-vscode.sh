@@ -105,27 +105,51 @@ vscodeProduct.nameShort = vibecodeProduct.nameShort;
 vscodeProduct.nameLong = vibecodeProduct.nameLong;
 vscodeProduct.applicationName = vibecodeProduct.applicationName;
 vscodeProduct.dataFolderName = vibecodeProduct.dataFolderName;
+vscodeProduct.sharedDataFolderName = vibecodeProduct.sharedDataFolderName;
 vscodeProduct.win32DirName = vibecodeProduct.win32DirName;
 vscodeProduct.win32NameVersion = vibecodeProduct.win32NameVersion || vibecodeProduct.nameLong;
 vscodeProduct.win32RegValueName = vibecodeProduct.win32RegValueName;
 vscodeProduct.win32MutexName = vibecodeProduct.win32MutexName;
 vscodeProduct.win32AppUserModelId = vibecodeProduct.win32AppUserModelId;
+vscodeProduct.win32x64AppId = vibecodeProduct.win32x64AppId;
+vscodeProduct.win32arm64AppId = vibecodeProduct.win32arm64AppId;
+vscodeProduct.win32x64UserAppId = vibecodeProduct.win32x64UserAppId;
+vscodeProduct.win32arm64UserAppId = vibecodeProduct.win32arm64UserAppId;
+vscodeProduct.win32ShellNameShort = vibecodeProduct.win32ShellNameShort;
+vscodeProduct.win32TunnelServiceMutex = vibecodeProduct.win32TunnelServiceMutex;
+vscodeProduct.win32TunnelMutex = vibecodeProduct.win32TunnelMutex;
 vscodeProduct.darwinBundleIdentifier = vibecodeProduct.darwinBundleIdentifier;
 vscodeProduct.linuxIconName = vibecodeProduct.linuxIconName;
 vscodeProduct.urlProtocol = vibecodeProduct.urlProtocol;
 vscodeProduct.licenseName = vibecodeProduct.licenseName;
 vscodeProduct.licenseUrl = vibecodeProduct.licenseUrl;
 vscodeProduct.reportIssueUrl = vibecodeProduct.reportIssueUrl;
+vscodeProduct.requestFeatureUrl = vibecodeProduct.requestFeatureUrl;
+vscodeProduct.updateUrl = vibecodeProduct.updateUrl;
+vscodeProduct.downloadUrl = vibecodeProduct.downloadUrl;
+vscodeProduct.releaseNotesUrl = vibecodeProduct.releaseNotesUrl;
+vscodeProduct.documentationUrl = vibecodeProduct.documentationUrl;
+vscodeProduct.keyboardShortcutsUrlMac = vibecodeProduct.keyboardShortcutsUrlMac;
+vscodeProduct.keyboardShortcutsUrlLinux = vibecodeProduct.keyboardShortcutsUrlLinux;
+vscodeProduct.keyboardShortcutsUrlWin = vibecodeProduct.keyboardShortcutsUrlWin;
 vscodeProduct.builtInExtensions = vibecodeProduct.builtInExtensions || [];
 vscodeProduct.onboardingThemes = vibecodeProduct.onboardingThemes;
+vscodeProduct.onboardingKeymaps = vibecodeProduct.onboardingKeymaps;
+
+// Override extensions gallery to use Open VSX (not Microsoft's proprietary one)
+if (vibecodeProduct.extensionsGallery) {
+    vscodeProduct.extensionsGallery = vibecodeProduct.extensionsGallery;
+}
 
 // Remove Microsoft-specific telemetry and update endpoints
 delete vscodeProduct.quality;
-delete vscodeProduct.extensionsGallery;
 delete vscodeProduct.linkedToOldStorageFolder;
 
 fs.writeFileSync('product.json', JSON.stringify(vscodeProduct, null, '\t'));
 console.log('product.json patched successfully');
+console.log('  nameShort:', vscodeProduct.nameShort);
+console.log('  applicationName:', vscodeProduct.applicationName);
+console.log('  win32DirName:', vscodeProduct.win32DirName);
 "
     log_success "product.json patched with VibeCode branding"
 fi
@@ -189,13 +213,22 @@ fi
 
 # Step 9: Copy VibeCode resources (icons, etc.)
 log_info "Copying VibeCode resources..."
-if [[ -d "${PROJECT_ROOT}/resources/win32/code.ico" ]]; then
+if [[ -f "${PROJECT_ROOT}/resources/win32/code.ico" ]]; then
     cp "${PROJECT_ROOT}/resources/win32/code.ico" "${VSCODE_SOURCE_DIR}/resources/win32/code.ico" 2>/dev/null || true
+    log_success "Custom Windows icon copied"
 fi
 if [[ -f "${PROJECT_ROOT}/resources/darwin/code.icns" ]]; then
     cp "${PROJECT_ROOT}/resources/darwin/code.icns" "${VSCODE_SOURCE_DIR}/resources/darwin/code.icns" 2>/dev/null || true
+    log_success "Custom macOS icon copied"
 fi
-log_success "Resources copied"
+
+# Copy Linux icons
+if [[ -d "${PROJECT_ROOT}/resources/linux" ]]; then
+    cp "${PROJECT_ROOT}/resources/linux/"code*.png "${VSCODE_SOURCE_DIR}/resources/linux/" 2>/dev/null || true
+    cp "${PROJECT_ROOT}/resources/linux/"code*.svg "${VSCODE_SOURCE_DIR}/resources/linux/" 2>/dev/null || true
+    log_success "Custom Linux icons copied"
+fi
+log_success "All resources copied"
 
 # Step 10: Install dependencies
 log_info "Installing VS Code dependencies..."

@@ -291,7 +291,7 @@ compile_source() {
         return
     fi
 
-    log_step "Compiling Real Vibecode"
+    log_step "Compiling VibeCode"
 
     local vscode_source="${PROJECT_ROOT}/vscode-source"
     
@@ -473,7 +473,7 @@ summarize_artifacts() {
 main() {
     echo ""
     echo -e "${CYAN}╔═══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║              Real Vibecode — Desktop Build                    ║${NC}"
+    echo -e "${CYAN}║              VibeCode — Desktop Build                         ║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     log_info "Platform:      ${PLATFORM}"

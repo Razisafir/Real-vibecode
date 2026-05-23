@@ -86,7 +86,13 @@ jobs:
         run: |
           rm -rf out 2>/dev/null || true
           cp -r vscode-source/out ./out
-          cp vscode-source/product.json ./product.json
+          # Do NOT overwrite our product.json with VS Code's — ours has VibeCode branding
+        shell: bash
+
+      - name: Verify product.json branding
+        run: |
+          echo "=== Checking product.json branding ==="
+          node -e "const p = require('./product.json'); console.log('nameShort:', p.nameShort); console.log('nameLong:', p.nameLong); console.log('applicationName:', p.applicationName); console.log('win32DirName:', p.win32DirName); if(p.nameShort !== 'VibeCode') { console.error('ERROR: product.json not branded!'); process.exit(1); }"
         shell: bash
 
       - name: Install Electron
@@ -176,7 +182,13 @@ jobs:
         run: |
           rm -rf out 2>/dev/null || true
           cp -r vscode-source/out ./out
-          cp vscode-source/product.json ./product.json
+          # Do NOT overwrite our product.json with VS Code's — ours has VibeCode branding
+        shell: bash
+
+      - name: Verify product.json branding
+        run: |
+          echo "=== Checking product.json branding ==="
+          node -e "const p = require('./product.json'); console.log('nameShort:', p.nameShort); console.log('nameLong:', p.nameLong); console.log('applicationName:', p.applicationName); console.log('win32DirName:', p.win32DirName); if(p.nameShort !== 'VibeCode') { console.error('ERROR: product.json not branded!'); process.exit(1); }"
         shell: bash
 
       - name: Install Electron
@@ -275,7 +287,13 @@ jobs:
         run: |
           rm -rf out 2>/dev/null || true
           cp -r vscode-source/out ./out
-          cp vscode-source/product.json ./product.json
+          # Do NOT overwrite our product.json with VS Code's — ours has VibeCode branding
+        shell: bash
+
+      - name: Verify product.json branding
+        run: |
+          echo "=== Checking product.json branding ==="
+          node -e "const p = require('./product.json'); console.log('nameShort:', p.nameShort); console.log('nameLong:', p.nameLong); console.log('applicationName:', p.applicationName); console.log('win32DirName:', p.win32DirName); if(p.nameShort !== 'VibeCode') { console.error('ERROR: product.json not branded!'); process.exit(1); }"
         shell: bash
 
       - name: Install Electron
@@ -326,17 +344,17 @@ jobs:
         with:
           files: release-assets/**/*
           body: |
-            ## Real Vibecode ${{ github.ref_name }}
+            ## VibeCode ${{ github.ref_name }}
 
             ### Downloads
 
             | Platform | File | Notes |
             |----------|------|-------|
-            | Windows x64 | `RealVibecode-Setup-*.exe` | NSIS installer (recommended) |
-            | macOS x64/ARM | `RealVibecode-*.dmg` | Universal binary |
-            | Linux x64 | `RealVibecode-*.AppImage` | Portable — chmod +x and run |
-            | Linux x64 | `RealVibecode-*.deb` | Debian/Ubuntu package |
-            | Linux x64 | `RealVibecode-*.rpm` | Fedora/RHEL package |
+            | Windows x64 | `VibeCode-Setup-*.exe` | NSIS installer (recommended) |
+            | macOS x64/ARM | `VibeCode-*.dmg` | Universal binary |
+            | Linux x64 | `VibeCode-*.AppImage` | Portable — chmod +x and run |
+            | Linux x64 | `VibeCode-*.deb` | Debian/Ubuntu package |
+            | Linux x64 | `VibeCode-*.rpm` | Fedora/RHEL package |
 
             > ⚠️ **Windows**: You may see a SmartScreen warning because the app is not code-signed yet.
             > Click **"More info"** → **"Run anyway"** to proceed.

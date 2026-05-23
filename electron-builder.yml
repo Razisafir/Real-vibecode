@@ -10,9 +10,9 @@
 # ---------------------------------------------------------------------------
 # Core metadata — must stay in sync with product.json
 # ---------------------------------------------------------------------------
-appId: com.realvibecode.ide
-productName: Real Vibecode
-copyright: Copyright (C) 2026 Real Vibecode Project. All rights reserved
+appId: com.vibecode.ide
+productName: VibeCode
+copyright: Copyright (C) 2026 VibeCode Project. All rights reserved
 
 # ---------------------------------------------------------------------------
 # Build directories & output
@@ -22,9 +22,9 @@ directories:
   buildResources: resources
 
 # ---------------------------------------------------------------------------
-# Artifact naming: RealVibecode-{version}-{platform}-{arch}
+# Artifact naming: VibeCode-{version}-{platform}-{arch}
 # ---------------------------------------------------------------------------
-artifactName: "RealVibecode-${version}-${platform}-${arch}.${ext}"
+artifactName: "VibeCode-${version}-${platform}-${arch}.${ext}"
 
 # ---------------------------------------------------------------------------
 # ASAR packaging
@@ -109,8 +109,8 @@ publish:
 # ---------------------------------------------------------------------------
 win:
   icon: resources/win32/code.ico
-  executableName: RealVibecode
-  legalTrademarks: "Real Vibecode is a trademark of the Real Vibecode Project."
+  executableName: VibeCode
+  legalTrademarks: "VibeCode is a trademark of the VibeCode Project."
   requestedExecutionLevel: asInvoker
   verifyUpdateCodeSignature: false  # No code signing certificate yet
   signAndEditExecutable: false  # Set to true when CSC_LINK is available
@@ -143,8 +143,8 @@ nsis:
   installerHeaderIcon: resources/win32/code.ico
   installerHeader: null # use default header banner
   installerSidebar: null # use default sidebar bitmap
-  shortcutName: "Real Vibecode"
-  artifactName: "RealVibecode-Setup-${version}-${arch}.${ext}"
+  shortcutName: "VibeCode"
+  artifactName: "VibeCode-Setup-${version}-${arch}.${ext}"
   include: build/win32/installer.nsh
   guid: "{A3D8C7E1-4B5F-6A9D-8E2C-7F3B1A6D9C04}" # Matches win32x64AppId from product.json
   deleteAppDataOnUninstall: false
@@ -168,11 +168,11 @@ mac:
   gatekeeperAssess: false
   strictVerify: false
   extendInfo:
-    CFBundleName: "Real Vibecode"
-    CFBundleDisplayName: "Real Vibecode"
+    CFBundleName: "VibeCode"
+    CFBundleDisplayName: "VibeCode"
     CFBundleShortVersionString: "${version}"
     CFBundleVersion: "${version}"
-    NSHumanReadableCopyright: "Copyright (C) 2026 Real Vibecode Project. All rights reserved."
+    NSHumanReadableCopyright: "Copyright (C) 2026 VibeCode Project. All rights reserved."
     CFBundleDocumentTypes:
       - CFBundleTypeName: Vibecode Project
         CFBundleTypeRole: Editor
@@ -182,18 +182,18 @@ mac:
           - com.realvibecode.vibecode
         LSHandlerRank: Owner
     CFBundleURLTypes:
-      - CFBundleURLName: "com.realvibecode.ide"
+      - CFBundleURLName: "com.vibecode.ide"
         CFBundleURLSchemes:
           - vibecode
     LSMinimumSystemVersion: "12.0.0"
     NSRequiresAquaSystemAppearance: false
     NSSupportsAutomaticGraphicsSwitching: true
-    NSAppleEventsUsageDescription: "Real Vibecode needs to send Apple Events to integrate with other applications."
-    NSDesktopFolderUsageDescription: "Real Vibecode needs access to your Desktop folder to open and save files."
-    NSDocumentsFolderUsageDescription: "Real Vibecode needs access to your Documents folder to open and save files."
-    NSDownloadsFolderUsageDescription: "Real Vibecode needs access to your Downloads folder to open and save files."
-    NSNetworkVolumesUsageDescription: "Real Vibecode needs access to network volumes to open and save files."
-    NSRemovableVolumesUsageDescription: "Real Vibecode needs access to removable volumes to open and save files."
+    NSAppleEventsUsageDescription: "VibeCode needs to send Apple Events to integrate with other applications."
+    NSDesktopFolderUsageDescription: "VibeCode needs access to your Desktop folder to open and save files."
+    NSDocumentsFolderUsageDescription: "VibeCode needs access to your Documents folder to open and save files."
+    NSDownloadsFolderUsageDescription: "VibeCode needs access to your Downloads folder to open and save files."
+    NSNetworkVolumesUsageDescription: "VibeCode needs access to network volumes to open and save files."
+    NSRemovableVolumesUsageDescription: "VibeCode needs access to removable volumes to open and save files."
     com.apple.security.cs.allow-jit: true
     com.apple.security.cs.allow-unsigned-executable-memory: true
     com.apple.security.cs.disable-library-validation: true
@@ -208,7 +208,7 @@ mac:
         - arm64
 
 dmg:
-  artifactName: "RealVibecode-${version}-mac-${arch}.${ext}"
+  artifactName: "VibeCode-${version}-mac-${arch}.${ext}"
   background: null # use default DMG background
   backgroundColor: "#2B2B2B"
   window:
@@ -221,7 +221,7 @@ dmg:
       y: 180
       type: link
       path: /Applications
-  title: "Real Vibecode ${version}"
+  title: "VibeCode ${version}"
 
 # ---------------------------------------------------------------------------
 # Linux — AppImage (primary), DEB, RPM
@@ -229,19 +229,19 @@ dmg:
 linux:
   icon: resources/linux
   category: Development;IDE;TextEditor;
-  executableName: real-vibecode
+  executableName: vibecode
   synopsis: "AI-Native Code Editing. Redefined."
-  description: "Real Vibecode is an AI-native IDE built on a forked architecture, combining the power of an AI execution kernel with a proven code editor foundation. It provides an authoritative mutation control layer and a causal execution graph engine for transparent, auditable AI-driven development."
-  maintainer: "Real Vibecode Project <https://github.com/Razisafir/Real-vibecode>"
-  vendor: "Real Vibecode Project"
+  description: "VibeCode is an AI-native IDE built on a forked architecture, combining the power of an AI execution kernel with a proven code editor foundation. It provides an authoritative mutation control layer and a causal execution graph engine for transparent, auditable AI-driven development."
+  maintainer: "VibeCode Project <https://github.com/Razisafir/Real-vibecode>"
+  vendor: "VibeCode Project"
   desktop:
-    Name: "Real Vibecode"
+    Name: "VibeCode"
     Comment: "AI-Native Code Editing. Redefined."
     GenericName: "Text Editor"
-    StartupWMClass: "Real Vibecode"
+    StartupWMClass: "VibeCode"
     Categories: "TextEditor;Development;IDE;"
-    MimeType: "application/x-vibecode;application/x-real-vibecode-workspace;"
-    Keywords: "real-vibecode;ai;editor;vibecode;"
+    MimeType: "application/x-vibecode;application/x-vibecode-workspace;"
+    Keywords: "vibecode;ai;editor;"
     StartupNotify: "true"
   target:
     - target: AppImage
@@ -258,11 +258,11 @@ linux:
         - arm64
 
 appImage:
-  artifactName: "RealVibecode-${version}-linux-${arch}.AppImage"
+  artifactName: "VibeCode-${version}-linux-${arch}.AppImage"
   license: LICENSE.txt
 
 deb:
-  artifactName: "RealVibecode-${version}-linux-${arch}.deb"
+  artifactName: "VibeCode-${version}-linux-${arch}.deb"
   depends:
     - libnotify4
     - libnss3
@@ -281,7 +281,7 @@ deb:
   afterRemove: build/linux/postrm.sh
 
 rpm:
-  artifactName: "RealVibecode-${version}-linux-${arch}.rpm"
+  artifactName: "VibeCode-${version}-linux-${arch}.rpm"
   depends:
     - libnotify
     - nss
@@ -298,7 +298,7 @@ rpm:
 # Snap (optional — for Ubuntu Snap Store)
 # ---------------------------------------------------------------------------
 snap:
-  artifactName: "RealVibecode-${version}-linux-${arch}.snap"
+  artifactName: "VibeCode-${version}-linux-${arch}.snap"
   plugs:
     - default
     - desktop
