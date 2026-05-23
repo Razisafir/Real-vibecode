@@ -362,8 +362,15 @@ copy_build_output() {
         # Copy compiled output
         cp -r "${vscode_source}/out" "${PROJECT_ROOT}/out"
         
-        # Copy required runtime files
-        cp "${vscode_source}/product.json" "${PROJECT_ROOT}/product.json" 2>/dev/null || true
+        # Do NOT overwrite our product.json — the one in vscode-source was already
+        # patched by prepare-vscode.sh, but to be safe we verify it has VibeCode branding.
+        # If VS Code's compile step somehow reset product.json, we must keep our branded version.
+        if node -e "const p = require('${vscode_source}/product.json'); process.exit(p.nameShort === 'VibeCode' ? 0 : 1)" 2>/dev/null; then
+            cp "${vscode_source}/product.json" "${PROJECT_ROOT}/product.json"
+            log_success "Verified product.json has VibeCode branding — copied"
+        else
+            log_warn "vscode-source/product.json lost VibeCode branding — keeping our version"
+        fi
         
         # Copy node_modules needed at runtime
         if [[ -d "${vscode_source}/node_modules" ]]; then

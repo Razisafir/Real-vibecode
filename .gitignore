@@ -5,6 +5,7 @@ node_modules/
 out/
 dist/
 vscode-source/
+.next/
 
 # IDE
 .vscode/
@@ -33,3 +34,11 @@ cli/target/
 # Temporary files
 *.tmp
 *.bak
+
+# Next.js (website)
+.next/
+
+# Downloaded repos from push script
+Real-vibecode/
+Vibecode-Website2/
+Vibecode-Website2-fresh/
