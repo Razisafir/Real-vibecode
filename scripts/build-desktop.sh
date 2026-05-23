@@ -3,6 +3,8 @@
 # Real Vibecode — Desktop Build Script
 # =============================================================================
 # Orchestrates the full desktop packaging pipeline for Windows, macOS, and Linux.
+# This script downloads the VS Code source, applies VibeCode branding,
+# compiles, and packages with electron-builder.
 #
 # Usage:
 #   ./scripts/build-desktop.sh                    # Build for current platform
@@ -14,10 +16,11 @@
 # Flags:
 #   --platform <win|mac|linux|all>   Target platform (default: auto-detect)
 #   --arch <x64|arm64>               Target architecture (default: host arch)
+#   --skip-prepare                   Skip VS Code source download/patch step
 #   --skip-compile                   Skip the VS Code compilation step
 #   --skip-sign                      Skip code signing (macOS/Windows)
 #   --publish                        Publish artifacts after build
-#   --clean                          Clean dist/ before building
+#   --clean                          Clean dist/ and vscode-source/ before building
 #   --verbose                        Enable verbose output
 #   -h, --help                       Show this help message
 #
@@ -29,6 +32,7 @@
 #   APPLE_TEAM_ID       Apple Developer team ID
 #   GH_TOKEN            GitHub token for publishing releases
 #   ELECTRON_CACHE      Custom Electron binary cache directory
+#   VSCODE_VERSION      Override VS Code version (default: from package.json)
 # =============================================================================
 
 set -euo pipefail
@@ -47,7 +51,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 log_info()    { echo -e "${BLUE}[INFO]${NC}  $*"; }
 log_success() { echo -e "${GREEN}[OK]${NC}    $*"; }
@@ -60,6 +64,7 @@ log_step()    { echo -e "\n${CYAN}━━━ $* ━━━${NC}"; }
 # ---------------------------------------------------------------------------
 PLATFORM=""
 ARCH=""
+SKIP_PREPARE=false
 SKIP_COMPILE=false
 SKIP_SIGN=false
 PUBLISH=false
@@ -70,7 +75,7 @@ VERBOSE=false
 # Parse arguments
 # ---------------------------------------------------------------------------
 usage() {
-    head -30 "$0" | tail -28 | sed 's/^# \?//'
+    head -35 "$0" | tail -33 | sed 's/^# \?//'
     exit 0
 }
 
@@ -83,6 +88,10 @@ while [[ $# -gt 0 ]]; do
         --arch)
             ARCH="$2"
             shift 2
+            ;;
+        --skip-prepare)
+            SKIP_PREPARE=true
+            shift
             ;;
         --skip-compile)
             SKIP_COMPILE=true
@@ -168,40 +177,6 @@ case "${ARCH}" in
 esac
 
 # ---------------------------------------------------------------------------
-# Validate cross-compilation support
-# ---------------------------------------------------------------------------
-validate_cross_compilation() {
-    local host_platform
-    host_platform="$(detect_platform)"
-
-    if [[ "${PLATFORM}" != "all" && "${PLATFORM}" != "${host_platform}" ]]; then
-        log_warn "Cross-compilation requested: host=${host_platform}, target=${PLATFORM}"
-        case "${host_platform}" in
-            linux)
-                # Linux can cross-compile for Windows via wine + electron-builder
-                if [[ "${PLATFORM}" == "mac" ]]; then
-                    log_error "Cross-compiling for macOS is only supported on macOS hosts."
-                    log_error "Use a macOS runner or set --platform mac on a Mac."
-                    exit 1
-                fi
-                log_info "Linux→Windows cross-compilation is supported via electron-builder."
-                ;;
-            mac)
-                log_info "macOS can cross-compile for Linux (AppImage/DEB only) and Windows."
-                ;;
-            win)
-                if [[ "${PLATFORM}" == "mac" ]]; then
-                    log_error "Cross-compiling for macOS is only supported on macOS hosts."
-                    exit 1
-                fi
-                ;;
-        esac
-    fi
-}
-
-validate_cross_compilation
-
-# ---------------------------------------------------------------------------
 # Check required dependencies
 # ---------------------------------------------------------------------------
 check_dependencies() {
@@ -215,7 +190,6 @@ check_dependencies() {
         node_version="$(node --version)"
         log_success "Node.js ${node_version} found"
 
-        # Check minimum version (18.x+)
         local node_major
         node_major="$(echo "${node_version}" | sed 's/^v\([0-9]*\).*/\1/')"
         if [[ "${node_major}" -lt 18 ]]; then
@@ -229,54 +203,36 @@ check_dependencies() {
 
     # npm
     if command -v npm &>/dev/null; then
-        local npm_version
-        npm_version="$(npm --version)"
-        log_success "npm ${npm_version} found"
+        log_success "npm $(npm --version) found"
     else
-        log_error "npm not found. It should be included with Node.js."
+        log_error "npm not found."
         missing+=("npm")
     fi
 
-    # Platform-specific checks
-    case "${PLATFORM}" in
-        win|all)
-            # Check for wine on non-Windows when targeting Windows
-            if [[ "$(detect_platform)" != "win" ]]; then
-                if command -v wine &>/dev/null; then
-                    log_success "Wine found (for Windows cross-compilation)"
-                else
-                    log_warn "Wine not found — Windows builds on non-Windows hosts may fail."
-                    log_warn "  Install wine if you need to build Windows installers."
-                fi
-            fi
-            ;;
-        mac|all)
-            if [[ "$(detect_platform)" == "mac" ]]; then
-                # Check for Xcode command line tools
-                if xcode-select -p &>/dev/null; then
-                    log_success "Xcode command line tools found"
-                else
-                    log_warn "Xcode command line tools not found. Run: xcode-select --install"
-                    missing+=("xcode-cli")
-                fi
-            fi
-            ;;
-        linux|all)
-            # Check for fpm (for RPM builds) on Linux
-            if [[ "$(detect_platform)" == "linux" ]]; then
-                if command -v fpm &>/dev/null; then
-                    log_success "fpm found (for RPM packaging)"
-                else
-                    log_warn "fpm not found — RPM packages may not be buildable."
-                    log_warn "  Install with: gem install fpm"
-                fi
-            fi
-            ;;
-    esac
+    # yarn (preferred for VS Code builds)
+    if command -v yarn &>/dev/null; then
+        log_success "yarn $(yarn --version) found"
+    else
+        log_warn "yarn not found — npm will be used (yarn is recommended for VS Code builds)"
+    fi
+
+    # git
+    if command -v git &>/dev/null; then
+        log_success "git $(git --version | cut -d' ' -f3) found"
+    else
+        log_error "git not found."
+        missing+=("git")
+    fi
+
+    # Python (required by node-gyp for native modules)
+    if command -v python3 &>/dev/null || command -v python &>/dev/null; then
+        log_success "Python found"
+    else
+        log_warn "Python not found — native module builds may fail"
+    fi
 
     if [[ ${#missing[@]} -gt 0 ]]; then
         log_error "Missing required dependencies: ${missing[*]}"
-        log_error "Please install them before running this script."
         exit 1
     fi
 
@@ -284,44 +240,50 @@ check_dependencies() {
 }
 
 # ---------------------------------------------------------------------------
-# Clean output directory
+# Clean output directories
 # ---------------------------------------------------------------------------
 clean_dist() {
-    log_step "Cleaning output directory"
+    log_step "Cleaning output directories"
+    
     local dist_dir="${PROJECT_ROOT}/dist"
+    local vscode_dir="${PROJECT_ROOT}/vscode-source"
+    
     if [[ -d "${dist_dir}" ]]; then
         rm -rf "${dist_dir}"
         log_success "Removed ${dist_dir}"
-    else
-        log_info "No dist/ directory to clean"
+    fi
+    
+    if [[ "${CLEAN}" == true ]] && [[ -d "${vscode_dir}" ]]; then
+        rm -rf "${vscode_dir}"
+        log_success "Removed ${vscode_dir}"
     fi
 }
 
 # ---------------------------------------------------------------------------
-# Install dependencies
+# Prepare VS Code source with VibeCode branding
 # ---------------------------------------------------------------------------
-install_deps() {
-    log_step "Installing project dependencies"
-
-    cd "${PROJECT_ROOT}"
-
-    if [[ -f "package.json" ]]; then
-        log_info "Running npm ci for deterministic install..."
-        if [[ "${VERBOSE}" == true ]]; then
-            npm ci
-        else
-            npm ci --silent 2>&1 | while read -r line; do
-                log_info "  ${line}"
-            done
-        fi
-        log_success "Dependencies installed"
-    else
-        log_warn "No package.json found — skipping dependency installation"
+prepare_source() {
+    if [[ "${SKIP_PREPARE}" == true ]]; then
+        log_step "Skipping source preparation (--skip-prepare)"
+        return
     fi
+
+    log_step "Preparing VS Code source with VibeCode branding"
+    
+    local vscode_source="${PROJECT_ROOT}/vscode-source"
+    
+    if [[ -d "${vscode_source}" ]] && [[ -f "${vscode_source}/package.json" ]]; then
+        log_info "VS Code source already exists — reusing (use --clean to rebuild from scratch)"
+    else
+        log_info "Running prepare-vscode.sh..."
+        bash "${SCRIPT_DIR}/prepare-vscode.sh"
+    fi
+    
+    log_success "Source preparation complete"
 }
 
 # ---------------------------------------------------------------------------
-# Compile the VS Code / Real Vibecode source
+# Compile the VS Code source
 # ---------------------------------------------------------------------------
 compile_source() {
     if [[ "${SKIP_COMPILE}" == true ]]; then
@@ -329,46 +291,43 @@ compile_source() {
         return
     fi
 
-    log_step "Compiling Real Vibecode source"
+    log_step "Compiling Real Vibecode"
 
-    cd "${PROJECT_ROOT}"
-
-    # Check if out/ directory already exists and is recent
-    if [[ -d "out" ]]; then
-        log_info "Existing out/ directory found"
+    local vscode_source="${PROJECT_ROOT}/vscode-source"
+    
+    if [[ ! -d "${vscode_source}" ]]; then
+        log_error "VS Code source not found at ${vscode_source}"
+        log_error "Run without --skip-prepare or run scripts/prepare-vscode.sh first"
+        exit 1
     fi
 
-    # Try the standard VS Code compilation pipeline
-    # The project may use npm scripts or gulp tasks
-    if npm run compile &>/dev/null 2>&1; then
-        log_info "Running npm run compile..."
+    cd "${vscode_source}"
+
+    # VS Code uses yarn for its build pipeline
+    if command -v yarn &>/dev/null; then
+        log_info "Compiling with yarn..."
+        
+        # Step 1: Compile the core
+        log_info "Running yarn compile..."
         if [[ "${VERBOSE}" == true ]]; then
-            npm run compile
+            yarn compile
         else
-            npm run compile 2>&1 | tail -5
+            yarn compile 2>&1 | tail -20
         fi
-    elif npm run vscode &>/dev/null 2>&1; then
-        log_info "Running npm run vscode..."
-        if [[ "${VERBOSE}" == true ]]; then
-            npm run vscode
-        else
-            npm run vscode 2>&1 | tail -5
-        fi
-    elif [[ -f "gulpfile.js" ]]; then
-        log_info "Running gulp compile..."
-        npx gulp compile
+        
+        # Step 2: Build the electron app
+        log_info "Running yarn electron..."
+        yarn electron 2>&1 | tail -5 || true
     else
-        log_warn "No standard compile target found"
-        log_info "Attempting to run yarn compile (if yarn is available)..."
-        if command -v yarn &>/dev/null; then
-            yarn compile 2>&1 | tail -5
+        log_info "Compiling with npm..."
+        
+        # Try npm scripts
+        if npm run compile &>/dev/null 2>&1; then
+            npm run compile 2>&1 | tail -20
+        elif [[ -f "gulpfile.js" ]]; then
+            npx gulp compile 2>&1 | tail -20
         else
-            log_error "Cannot find a way to compile the project."
-            log_error "Ensure one of the following exists:"
-            log_error "  - npm run compile"
-            log_error "  - npm run vscode"
-            log_error "  - gulpfile.js with compile task"
-            log_error "  - yarn with compile script"
+            log_error "Cannot find compilation method. Install yarn: npm install -g yarn"
             exit 1
         fi
     fi
@@ -378,6 +337,48 @@ compile_source() {
         log_success "Compilation complete — out/ directory created"
     else
         log_error "Compilation may have failed — out/ directory not found"
+        exit 1
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Copy compiled output to project root for electron-builder
+# ---------------------------------------------------------------------------
+copy_build_output() {
+    log_step "Copying build output for packaging"
+
+    local vscode_source="${PROJECT_ROOT}/vscode-source"
+    cd "${PROJECT_ROOT}"
+
+    # Copy the compiled output from vscode-source to project root
+    if [[ -d "${vscode_source}/out" ]]; then
+        # Clean old output
+        rm -rf "${PROJECT_ROOT}/out"
+        
+        # Copy compiled output
+        cp -r "${vscode_source}/out" "${PROJECT_ROOT}/out"
+        
+        # Copy required runtime files
+        cp "${vscode_source}/product.json" "${PROJECT_ROOT}/product.json" 2>/dev/null || true
+        
+        # Copy node_modules needed at runtime
+        if [[ -d "${vscode_source}/node_modules" ]]; then
+            # Only copy if we don't have them already
+            if [[ ! -d "${PROJECT_ROOT}/node_modules" ]]; then
+                log_info "Copying node_modules..."
+                cp -r "${vscode_source}/node_modules" "${PROJECT_ROOT}/node_modules"
+            fi
+        fi
+        
+        # Copy extensions
+        if [[ -d "${vscode_source}/extensions" ]]; then
+            rm -rf "${PROJECT_ROOT}/extensions_built" 2>/dev/null || true
+            cp -r "${vscode_source}/extensions" "${PROJECT_ROOT}/extensions_built"
+        fi
+        
+        log_success "Build output copied to project root"
+    else
+        log_error "No compiled output found at ${vscode_source}/out"
         exit 1
     fi
 }
@@ -395,16 +396,9 @@ run_electron_builder() {
         publish_flag="--publish never"
     fi
 
-    local sign_flag=""
     if [[ "${SKIP_SIGN}" == true ]]; then
-        # Disable code signing via environment variable
         export CSC_IDENTITY_AUTO_DISCOVERY=false
         log_warn "Code signing disabled (--skip-sign)"
-    fi
-
-    local verbose_flag=""
-    if [[ "${VERBOSE}" == true ]]; then
-        verbose_flag="--config.compression=store"
     fi
 
     cd "${PROJECT_ROOT}"
@@ -412,24 +406,19 @@ run_electron_builder() {
     case "${target_platform}" in
         win)
             log_step "Building Windows NSIS installer"
-            npx electron-builder --win --"${ARCH}" ${publish_flag} ${verbose_flag}
+            npx electron-builder --win --"${ARCH}" ${publish_flag}
             ;;
         mac)
             log_step "Building macOS DMG"
-            npx electron-builder --mac --"${ARCH}" ${publish_flag} ${verbose_flag}
-
-            # Notarize if Apple credentials are available
-            if [[ "${SKIP_SIGN}" == false ]] && [[ -n "${APPLE_ID:-}" ]] && [[ -n "${APPLE_ID_PASSWORD:-}" ]] && [[ -n "${APPLE_TEAM_ID:-}" ]]; then
-                log_info "Apple notarization credentials detected — notarization will be attempted by electron-builder"
-            fi
+            npx electron-builder --mac --"${ARCH}" ${publish_flag}
             ;;
         linux)
             log_step "Building Linux packages (AppImage + DEB + RPM)"
-            npx electron-builder --linux --"${ARCH}" ${publish_flag} ${verbose_flag}
+            npx electron-builder --linux --"${ARCH}" ${publish_flag}
             ;;
         all)
             log_step "Building all platforms"
-            npx electron-builder --win --mac --linux --"${ARCH}" ${publish_flag} ${verbose_flag}
+            npx electron-builder --win --mac --linux --"${ARCH}" ${publish_flag}
             ;;
         *)
             log_error "Unknown platform: ${target_platform}"
@@ -487,12 +476,13 @@ main() {
     echo -e "${CYAN}║              Real Vibecode — Desktop Build                    ║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    log_info "Platform:   ${PLATFORM}"
-    log_info "Architecture: ${ARCH}"
-    log_info "Project:    ${PROJECT_ROOT}"
-    log_info "Skip compile: ${SKIP_COMPILE}"
-    log_info "Skip sign:  ${SKIP_SIGN}"
-    log_info "Publish:    ${PUBLISH}"
+    log_info "Platform:      ${PLATFORM}"
+    log_info "Architecture:  ${ARCH}"
+    log_info "Project:       ${PROJECT_ROOT}"
+    log_info "Skip prepare:  ${SKIP_PREPARE}"
+    log_info "Skip compile:  ${SKIP_COMPILE}"
+    log_info "Skip sign:     ${SKIP_SIGN}"
+    log_info "Publish:       ${PUBLISH}"
     echo ""
 
     # Step 1: Check dependencies
@@ -503,15 +493,17 @@ main() {
         clean_dist
     fi
 
-    # Step 3: Install npm dependencies
-    install_deps
+    # Step 3: Prepare VS Code source with VibeCode branding
+    prepare_source
 
     # Step 4: Compile source
     compile_source
 
-    # Step 5: Build for target platform(s)
+    # Step 5: Copy build output
+    copy_build_output
+
+    # Step 6: Build for target platform(s)
     if [[ "${PLATFORM}" == "all" ]]; then
-        # Build each platform sequentially
         for p in win mac linux; do
             run_electron_builder "${p}"
         done
@@ -519,7 +511,7 @@ main() {
         run_electron_builder "${PLATFORM}"
     fi
 
-    # Step 6: Summarize output
+    # Step 7: Summarize output
     summarize_artifacts
 
     echo ""

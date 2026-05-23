@@ -17,6 +17,7 @@
     "url": "https://github.com/Razisafir/Real-vibecode/issues"
   },
   "scripts": {
+    "prepare": "bash scripts/prepare-vscode.sh",
     "build:desktop": "bash scripts/build-desktop.sh",
     "build:desktop:win": "bash scripts/build-desktop.sh --platform win",
     "build:desktop:mac": "bash scripts/build-desktop.sh --platform mac",

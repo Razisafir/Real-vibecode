@@ -9,13 +9,22 @@ on:
       version:
         description: "Version to build (e.g. 1.121.1)"
         required: true
+      skip_sign:
+        description: "Skip code signing"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
 
+env:
+  # Increase Node.js memory for VS Code compilation
+  NODE_OPTIONS: "--max-old-space-size=8192"
+
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
@@ -29,39 +38,90 @@ jobs:
             artifact: linux
 
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-      - name: Build desktop app
-        run: npm run build:desktop:${{ matrix.platform }}
+      - name: Setup Yarn
+        run: npm install -g yarn
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbfile-dev libsecret-1-0 libkrb5-dev libxss1 libgbm1 rpm
+
+      - name: Cache VS Code source
+        uses: actions/cache@v4
+        with:
+          path: vscode-source
+          key: vscode-source-${{ hashFiles('package.json') }}-${{ runner.os }}
+          restore-keys: |
+            vscode-source-${{ hashFiles('package.json') }}-
+            vscode-source-
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            vscode-source/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            node-modules-${{ runner.os }}-
+
+      - name: Prepare VS Code source
+        run: bash scripts/prepare-vscode.sh
+        shell: bash
+        env:
+          VSCODE_VERSION: ${{ github.event.inputs.version || '1.121.1' }}
+
+      - name: Compile source
+        run: bash scripts/build-desktop.sh --platform ${{ matrix.platform }} --skip-prepare
+        shell: bash
         env:
           NODE_ENV: production
 
       - name: Package (Windows)
         if: matrix.platform == 'win'
         run: npx electron-builder --win --publish never
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
       - name: Package (macOS)
         if: matrix.platform == 'mac'
         run: npx electron-builder --mac --publish never
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Package (Linux)
         if: matrix.platform == 'linux'
         run: npx electron-builder --linux --publish never
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -77,6 +137,7 @@ jobs:
             dist/*.deb
             dist/*.rpm
           if-no-files-found: warn
+          retention-days: 30
 
   release:
     needs: build

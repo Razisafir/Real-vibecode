@@ -15,25 +15,25 @@ import * as product from '../../product.json';
  * Windows Explorer, and the taskbar.
  */
 export const win32ExeMetadata = {
-	CompanyName: 'Real Vibecode Project',
-	FileDescription: product.nameLong,
-	FileVersion: product.version || '1.121.0',
-	InternalName: product.applicationName,
-	LegalCopyright: 'Copyright (C) 2026 Real Vibecode Project. All rights reserved',
-	OriginalFilename: `${product.applicationName}.exe`,
-	ProductName: product.nameLong,
-	ProductVersion: product.version || '1.121.0',
+        CompanyName: 'Real Vibecode Project',
+        FileDescription: product.nameLong,
+        FileVersion: product.version || '1.121.1',
+        InternalName: product.applicationName,
+        LegalCopyright: 'Copyright (C) 2026 Real Vibecode Project. All rights reserved',
+        OriginalFilename: `${product.applicationName}.exe`,
+        ProductName: product.nameLong,
+        ProductVersion: product.version || '1.121.1',
 };
 
 /**
  * macOS Info.plist overrides — applied during macOS app bundle creation.
  */
 export const darwinInfoPlistOverrides = {
-	CFBundleName: product.nameLong,
-	CFBundleDisplayName: product.nameLong,
-	CFBundleIdentifier: product.darwinBundleIdentifier,
-	CFBundleShortVersionString: product.version || '1.121.0',
-	NSHumanReadableCopyright: 'Copyright (C) 2026 Real Vibecode Project. All rights reserved.',
+        CFBundleName: product.nameLong,
+        CFBundleDisplayName: product.nameLong,
+        CFBundleIdentifier: product.darwinBundleIdentifier,
+        CFBundleShortVersionString: product.version || '1.121.1',
+        NSHumanReadableCopyright: 'Copyright (C) 2026 Real Vibecode Project. All rights reserved.',
 };
 
 /**
@@ -41,9 +41,9 @@ export const darwinInfoPlistOverrides = {
  * All build artifacts should follow this naming pattern.
  */
 export const artifactNaming = {
-	windows: `RealVibecode-${product.version || '1.121.0'}`,
-	macOS: `RealVibecode-${product.version || '1.121.0'}`,
-	linux: `real-vibecode_${product.version || '1.121.0'}`,
+        windows: `RealVibecode-${product.version || '1.121.1'}`,
+        macOS: `RealVibecode-${product.version || '1.121.1'}`,
+        linux: `real-vibecode_${product.version || '1.121.1'}`,
 };
 
 /**
