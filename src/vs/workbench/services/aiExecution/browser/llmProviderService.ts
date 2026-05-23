@@ -149,6 +149,13 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                         throw new BudgetExceededError(this.costGovernor.getBudgetSnapshot());
                 }
 
+                // Phase 35: Also check daily/monthly budget via wouldExceedBudget
+                const estimatedInputTokens = Math.ceil(request.messages.reduce((sum, m) => sum + m.content.length / 4, 0));
+                const estimatedCost = this.costGovernor.estimateCost(request.model, estimatedInputTokens, estimatedTokens);
+                if (this.costGovernor.wouldExceedBudget(estimatedCost)) {
+                        throw new BudgetExceededError(this.costGovernor.getBudgetSnapshot());
+                }
+
                 const cts = new CancellationTokenSource();
                 this._cancellationSources.set(request.requestId, cts);
                 this._activeRequests.add(request.requestId);

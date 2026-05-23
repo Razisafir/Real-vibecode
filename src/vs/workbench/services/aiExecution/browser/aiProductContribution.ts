@@ -76,6 +76,13 @@ import { getAIWorkflowHTML } from './aiWorkflowContent.js';
 import { IKnowledgeGraphVisualizationService } from './knowledgeGraphVisualizationService.js';
 import { IMemoryVisualizationService, MemoryEntry, TokenBudget, CompactionStatus } from './memoryVisualizationService.js';
 
+// Provider Health Dashboard visualization service
+import { IProviderHealthDashboardService } from './providerHealthDashboard.js';
+
+// Cost Governor Dashboard visualization service
+import { ICostGovernorDashboardService } from './costGovernorDashboard.js';
+import { ICostGovernorService } from '../common/costGovernor.js';
+
 // Command registration
 import { CommandsRegistry, ICommandService } from '../../../../platform/commands/common/commands.js';
 
@@ -105,6 +112,8 @@ const AI_TIMELINE_VIEW_ID = 'aiExecution.timeline';
 const AI_KNOWLEDGE_GRAPH_VIEW_ID = 'aiExecution.knowledgeGraph';
 const AI_MEMORY_VIEW_ID = 'aiExecution.memory';
 const AI_JARVIS_VIEW_ID = 'aiExecution.jarvis';
+const AI_PROVIDER_HEALTH_VIEW_ID = 'aiExecution.providerHealth';
+const AI_COST_GOVERNOR_VIEW_ID = 'aiExecution.costGovernor';
 
 const STORAGE_KEY_PROJECT = 'aiExecution.currentProject';
 const STORAGE_KEY_STEP = 'aiExecution.currentStep';
@@ -150,6 +159,18 @@ const aiJarvisIcon = registerIcon(
         'ai-jarvis-icon',
         Codicon.commentDiscussion,
         'AI Jarvis chat view icon'
+);
+
+const aiProviderHealthIcon = registerIcon(
+        'ai-provider-health-icon',
+        Codicon.eye,
+        'AI Provider Health view icon'
+);
+
+const aiCostGovernorIcon = registerIcon(
+        'ai-cost-governor-icon',
+        Codicon.graphLine,
+        'AI Cost Governor view icon'
 );
 
 // =====================================================================================
@@ -240,6 +261,28 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([
                 canToggleVisibility: true,
                 ctorDescriptor: new SyncDescriptor(
                         class AIJarvisViewPane {
+                                constructor() { /* resolved by webviewViewService */ }
+                        }
+                ),
+        },
+        {
+                id: AI_PROVIDER_HEALTH_VIEW_ID,
+                name: { value: 'Provider Health', original: 'Provider Health' },
+                containerIcon: aiProviderHealthIcon,
+                canToggleVisibility: true,
+                ctorDescriptor: new SyncDescriptor(
+                        class AIProviderHealthViewPane {
+                                constructor() { /* resolved by webviewViewService */ }
+                        }
+                ),
+        },
+        {
+                id: AI_COST_GOVERNOR_VIEW_ID,
+                name: { value: 'Cost Governor', original: 'Cost Governor' },
+                containerIcon: aiCostGovernorIcon,
+                canToggleVisibility: true,
+                ctorDescriptor: new SyncDescriptor(
+                        class AICostGovernorViewPane {
                                 constructor() { /* resolved by webviewViewService */ }
                         }
                 ),
@@ -699,6 +742,11 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                 @IMemoryVisualizationService private readonly memoryVisualizationService: IMemoryVisualizationService,
                 // Execution graph for Knowledge Graph data
                 @IExecutionGraphService private readonly executionGraphService: IExecutionGraphService,
+                // Provider Health Dashboard service
+                @IProviderHealthDashboardService private readonly providerHealthDashboardService: IProviderHealthDashboardService,
+                // Cost Governor Dashboard service
+                @ICostGovernorDashboardService private readonly costGovernorDashboardService: ICostGovernorDashboardService,
+                @ICostGovernorService private readonly costGovernorService: ICostGovernorService,
                 // QuickInput for API key configuration UI
                 @IQuickInputService private readonly quickInputService: IQuickInputService,
                 // Command service for view focus operations
@@ -893,6 +941,77 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                                 });
 
                                 this.logService.info('[AIProduct] Jarvis Chat webview resolved and ready with LLM wiring');
+                        },
+                });
+
+                // ─── Provider Health Dashboard webview resolver ─────────────────────────
+                this.webviewViewService.register(AI_PROVIDER_HEALTH_VIEW_ID, {
+                        resolve: async (webviewView: WebviewView, token: CancellationToken) => {
+                                webviewView.webview.options = {
+                                        enableScripts: true,
+                                        localResourceRoots: [],
+                                };
+
+                                webviewView.webview.html = this.providerHealthDashboardService.render();
+
+                                // Handle postMessage from the health dashboard webview
+                                webviewView.webview.onDidReceiveMessage((msg: { type: string; providerId?: string; [key: string]: any }) => {
+                                        if (msg.type === 'refreshHealth') {
+                                                webviewView.webview.html = this.providerHealthDashboardService.render();
+                                        } else if (msg.type === 'providerSelected' && msg.providerId) {
+                                                this.logService.info(`[AIProduct] Provider selected: ${msg.providerId}`);
+                                        }
+                                });
+
+                                // Subscribe to health service changes to auto-refresh the dashboard
+                                this._register(this.providerHealthService.onDidChangeHealth(() => {
+                                        webviewView.webview.html = this.providerHealthDashboardService.render();
+                                }));
+
+                                // Also subscribe to dashboard data changes
+                                this._register(this.providerHealthDashboardService.onDidChangeData(() => {
+                                        webviewView.webview.html = this.providerHealthDashboardService.render();
+                                }));
+
+                                this.logService.info('[AIProduct] Provider Health Dashboard webview resolved and ready');
+                        },
+                });
+
+                // ─── Cost Governor Dashboard webview resolver ───────────────────────────
+                this.webviewViewService.register(AI_COST_GOVERNOR_VIEW_ID, {
+                        resolve: async (webviewView: WebviewView, token: CancellationToken) => {
+                                webviewView.webview.options = {
+                                        enableScripts: true,
+                                        localResourceRoots: [],
+                                };
+
+                                webviewView.webview.html = this.costGovernorDashboardService.render();
+
+                                // Handle postMessage from the cost governor dashboard webview
+                                webviewView.webview.onDidReceiveMessage((msg: { type: string; [key: string]: any }) => {
+                                        if (msg.type === 'refreshCost') {
+                                                webviewView.webview.html = this.costGovernorDashboardService.render();
+                                        } else if (msg.type === 'resetBudget') {
+                                                this.costGovernorService.resetBudget();
+                                                webviewView.webview.html = this.costGovernorDashboardService.render();
+                                        } else if (msg.type === 'emergencyStop') {
+                                                this.costGovernorService.activateEmergencyStop('User activated emergency stop from dashboard');
+                                                webviewView.webview.html = this.costGovernorDashboardService.render();
+                                        } else if (msg.type === 'deactivateEmergency') {
+                                                this.costGovernorService.deactivateEmergencyStop();
+                                                webviewView.webview.html = this.costGovernorDashboardService.render();
+                                        }
+                                });
+
+                                // Subscribe to cost governor events to auto-refresh the dashboard
+                                this._register(this.costGovernorService.onBudgetStatusChange(() => {
+                                        webviewView.webview.html = this.costGovernorDashboardService.render();
+                                }));
+                                this._register(this.costGovernorService.onBurnRateUpdate(() => {
+                                        webviewView.webview.html = this.costGovernorDashboardService.render();
+                                }));
+
+                                this.logService.info('[AIProduct] Cost Governor Dashboard webview resolved and ready');
                         },
                 });
         }

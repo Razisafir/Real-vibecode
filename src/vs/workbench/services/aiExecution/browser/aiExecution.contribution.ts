@@ -122,11 +122,15 @@ import { AIContextService } from './aiContextService.js';
 import { IRollbackEngineService } from '../common/rollbackEngine.js';
 import { RollbackEngineService } from './rollbackEngineService.js';
 
-// ---- VISUALIZATION (2) — render graph/memory as HTML for webviews ----
+// ---- VISUALIZATION (4) — render graph/memory/health/cost as HTML for webviews ----
 import { IKnowledgeGraphVisualizationService } from './knowledgeGraphVisualizationService.js';
 import { KnowledgeGraphVisualizationService } from './knowledgeGraphVisualizationService.js';
 import { IMemoryVisualizationService } from './memoryVisualizationService.js';
 import { MemoryVisualizationService } from './memoryVisualizationService.js';
+import { IProviderHealthDashboardService } from './providerHealthDashboard.js';
+import { ProviderHealthDashboardService } from './providerHealthDashboard.js';
+import { ICostGovernorDashboardService } from './costGovernorDashboard.js';
+import { CostGovernorDashboardService } from './costGovernorDashboard.js';
 
 // ---- Real UI Product Contribution ----
 import './aiProductContribution.js';
@@ -209,6 +213,8 @@ registerSingleton(IAIExecutionService, AIExecutionService, InstantiationType.Del
 // ROLLBACK (1) — actual undo/restore operations for execution graph nodes
 registerSingleton(IRollbackEngineService, RollbackEngineService, InstantiationType.Eager);
 
-// VISUALIZATION (2) — render graph/memory as HTML for sidebar webview panels
+// VISUALIZATION (4) — render graph/memory/health/cost as HTML for sidebar webview panels
 registerSingleton(IKnowledgeGraphVisualizationService, KnowledgeGraphVisualizationService, InstantiationType.Delayed);
 registerSingleton(IMemoryVisualizationService, MemoryVisualizationService, InstantiationType.Delayed);
+registerSingleton(IProviderHealthDashboardService, ProviderHealthDashboardService, InstantiationType.Delayed);
+registerSingleton(ICostGovernorDashboardService, CostGovernorDashboardService, InstantiationType.Delayed);

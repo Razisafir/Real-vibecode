@@ -36,14 +36,14 @@ import { Event } from '../../../../base/common/event.js';
  * Budget status.
  */
 export enum BudgetStatus {
-	/** Within budget */
-	Healthy = 'healthy',
-	/** Approaching limit (>80%) */
-	Warning = 'warning',
-	/** Budget exceeded */
-	Exceeded = 'exceeded',
-	/** Emergency stop activated */
-	Emergency = 'emergency',
+        /** Within budget */
+        Healthy = 'healthy',
+        /** Approaching limit (>80%) */
+        Warning = 'warning',
+        /** Budget exceeded */
+        Exceeded = 'exceeded',
+        /** Emergency stop activated */
+        Emergency = 'emergency',
 }
 
 // -- Data Types --
@@ -52,178 +52,258 @@ export enum BudgetStatus {
  * Budget configuration with hard caps.
  */
 export interface BudgetConfig {
-	/** Hard token ceiling (0 = unlimited) */
-	maxTokens: number;
-	/** Hard dollar ceiling (0 = unlimited) */
-	maxCostUSD: number;
-	/** Warning threshold (0-1, default 0.8) */
-	warningThreshold: number;
-	/** Minimum cooldown between API calls in ms (default: 500) */
-	cooldownMs: number;
-	/** Maximum retries per request (default: 3) */
-	maxRetries: number;
-	/** Maximum tokens per minute (rate limiting, 0 = unlimited) */
-	maxTokensPerMinute: number;
-	/** Maximum cost per minute in USD (0 = unlimited) */
-	maxCostPerMinute: number;
-	/** Whether emergency stop is active */
-	emergencyStop: boolean;
+        /** Hard token ceiling (0 = unlimited) */
+        maxTokens: number;
+        /** Hard dollar ceiling (0 = unlimited) */
+        maxCostUSD: number;
+        /** Warning threshold (0-1, default 0.8) */
+        warningThreshold: number;
+        /** Minimum cooldown between API calls in ms (default: 500) */
+        cooldownMs: number;
+        /** Maximum retries per request (default: 3) */
+        maxRetries: number;
+        /** Maximum tokens per minute (rate limiting, 0 = unlimited) */
+        maxTokensPerMinute: number;
+        /** Maximum cost per minute in USD (0 = unlimited) */
+        maxCostPerMinute: number;
+        /** Whether emergency stop is active */
+        emergencyStop: boolean;
 }
 
 /**
  * Current budget usage snapshot.
  */
 export interface BudgetSnapshot {
-	/** Total tokens used in this execution */
-	tokensUsed: number;
-	/** Total cost in USD */
-	costUsed: number;
-	/** Token ceiling (0 = unlimited) */
-	tokenCeiling: number;
-	/** Cost ceiling in USD (0 = unlimited) */
-	costCeiling: number;
-	/** Current status */
-	status: BudgetStatus;
-	/** Token usage as fraction of ceiling (0-1, 1 if unlimited) */
-	tokenFraction: number;
-	/** Cost usage as fraction of ceiling (0-1, 1 if unlimited) */
-	costFraction: number;
-	/** Current burn rate: tokens per second */
-	tokenBurnRate: number;
-	/** Current burn rate: USD per second */
-	costBurnRate: number;
-	/** Projected remaining cost to complete the current plan */
-	projectedRemainingCost: number;
-	/** Projected remaining tokens to complete the current plan */
-	projectedRemainingTokens: number;
-	/** Timestamp of this snapshot */
-	timestamp: number;
+        /** Total tokens used in this execution */
+        tokensUsed: number;
+        /** Total cost in USD */
+        costUsed: number;
+        /** Token ceiling (0 = unlimited) */
+        tokenCeiling: number;
+        /** Cost ceiling in USD (0 = unlimited) */
+        costCeiling: number;
+        /** Current status */
+        status: BudgetStatus;
+        /** Token usage as fraction of ceiling (0-1, 1 if unlimited) */
+        tokenFraction: number;
+        /** Cost usage as fraction of ceiling (0-1, 1 if unlimited) */
+        costFraction: number;
+        /** Current burn rate: tokens per second */
+        tokenBurnRate: number;
+        /** Current burn rate: USD per second */
+        costBurnRate: number;
+        /** Projected remaining cost to complete the current plan */
+        projectedRemainingCost: number;
+        /** Projected remaining tokens to complete the current plan */
+        projectedRemainingTokens: number;
+        /** Timestamp of this snapshot */
+        timestamp: number;
 }
 
 /**
  * Record of a single API call's cost.
  */
 export interface CostRecord {
-	/** Request ID */
-	readonly requestId: string;
-	/** Provider ID */
-	readonly providerId: string;
-	/** Model name */
-	readonly model: string;
-	/** Input tokens (estimated) */
-	readonly inputTokens: number;
-	/** Output tokens (estimated) */
-	readonly outputTokens: number;
-	/** Cost in USD */
-	readonly costUSD: number;
-	/** Timestamp */
-	readonly timestamp: number;
-	/** Duration of the API call in ms */
-	readonly durationMs: number;
+        /** Request ID */
+        readonly requestId: string;
+        /** Provider ID */
+        readonly providerId: string;
+        /** Model name */
+        readonly model: string;
+        /** Input tokens (estimated) */
+        readonly inputTokens: number;
+        /** Output tokens (estimated) */
+        readonly outputTokens: number;
+        /** Cost in USD */
+        readonly costUSD: number;
+        /** Timestamp */
+        readonly timestamp: number;
+        /** Duration of the API call in ms */
+        readonly durationMs: number;
 }
 
 /**
  * Runaway loop detection result.
  */
 export interface RunawayDetection {
-	/** Whether a runaway pattern is detected */
-	readonly isRunaway: boolean;
-	/** Reason for the detection */
-	readonly reason: string | null;
-	/** Current escalation rate (tokens per minute trend) */
-	readonly escalationRate: number;
-	/** Suggested action */
-	readonly suggestedAction: string | null;
+        /** Whether a runaway pattern is detected */
+        readonly isRunaway: boolean;
+        /** Reason for the detection */
+        readonly reason: string | null;
+        /** Current escalation rate (tokens per minute trend) */
+        readonly escalationRate: number;
+        /** Suggested action */
+        readonly suggestedAction: string | null;
+}
+
+/**
+ * Daily and monthly budget limits.
+ * Adds time-scoped budget constraints on top of the per-execution BudgetConfig.
+ */
+export interface TimeBudget {
+        /** Daily spending limit in USD (0 = unlimited, default: 10) */
+        dailyLimitUSD: number;
+        /** Monthly spending limit in USD (0 = unlimited, default: 100) */
+        monthlyLimitUSD: number;
+        /** Alert threshold as fraction (0-1, default: 0.8) — fires onBudgetAlert when crossed */
+        alertThreshold: number;
+}
+
+/**
+ * Cost summary for a given time period.
+ * Provides total and per-provider/per-model breakdowns.
+ */
+export interface CostSummary {
+        /** Total cost in USD for the period */
+        readonly totalCost: number;
+        /** Cost incurred today in USD */
+        readonly todayCost: number;
+        /** Cost incurred this month in USD */
+        readonly monthlyCost: number;
+        /** Total input tokens */
+        readonly totalInputTokens: number;
+        /** Total output tokens */
+        readonly totalOutputTokens: number;
+        /** Total number of API calls */
+        readonly requestCount: number;
+        /** Cost breakdown by provider */
+        readonly byProvider: ReadonlyMap<string, { cost: number; requests: number; tokens: number }>;
+        /** Cost breakdown by model */
+        readonly byModel: ReadonlyMap<string, { cost: number; requests: number; tokens: number }>;
+}
+
+/**
+ * Model pricing entry for cost estimation.
+ */
+export interface ModelPricing {
+        /** Price per 1M input tokens in USD */
+        readonly inputPricePerMillion: number;
+        /** Price per 1M output tokens in USD */
+        readonly outputPricePerMillion: number;
 }
 
 // -- Service Interface --
 
 export interface ICostGovernorService {
-	readonly _serviceBrand: undefined;
+        readonly _serviceBrand: undefined;
 
-	/** Fired when budget status changes */
-	readonly onBudgetStatusChange: Event<BudgetStatus>;
-	/** Fired when budget is exceeded */
-	readonly onBudgetExceeded: Event<{ type: 'tokens' | 'cost'; used: number; ceiling: number }>;
-	/** Fired when emergency stop is activated */
-	readonly onEmergencyStop: Event<{ reason: string }>;
-	/** Fired when burn rate updates */
-	readonly onBurnRateUpdate: Event<{ tokenRate: number; costRate: number }>;
+        /** Fired when budget status changes */
+        readonly onBudgetStatusChange: Event<BudgetStatus>;
+        /** Fired when budget is exceeded */
+        readonly onBudgetExceeded: Event<{ type: 'tokens' | 'cost'; used: number; ceiling: number }>;
+        /** Fired when emergency stop is activated */
+        readonly onEmergencyStop: Event<{ reason: string }>;
+        /** Fired when burn rate updates */
+        readonly onBurnRateUpdate: Event<{ tokenRate: number; costRate: number }>;
+        /** Fired when a daily or monthly budget alert threshold is crossed */
+        readonly onBudgetAlert: Event<{ type: 'daily' | 'monthly'; percentage: number; current: number; limit: number }>;
+        /** Fired when a cost is recorded */
+        readonly onCostRecorded: Event<CostRecord>;
 
-	/**
-	 * Check if an API call is allowed under current budget constraints.
-	 * Returns true if the call can proceed, false if budget is exceeded.
-	 * Also checks cooldowns and rate limits.
-	 */
-	isCallAllowed(estimatedTokens: number): boolean;
+        /**
+         * Check if an API call is allowed under current budget constraints.
+         * Returns true if the call can proceed, false if budget is exceeded.
+         * Also checks cooldowns and rate limits.
+         */
+        isCallAllowed(estimatedTokens: number): boolean;
 
-	/**
-	 * Record an API call's cost after completion.
-	 * Updates token and cost counters, burn rate, and budget status.
-	 */
-	recordCost(record: CostRecord): void;
+        /**
+         * Record an API call's cost after completion.
+         * Updates token and cost counters, burn rate, and budget status.
+         */
+        recordCost(record: CostRecord): void;
 
-	/**
-	 * Get the current budget snapshot.
-	 */
-	getBudgetSnapshot(): BudgetSnapshot;
+        /**
+         * Get the current budget snapshot.
+         */
+        getBudgetSnapshot(): BudgetSnapshot;
 
-	/**
-	 * Get the budget configuration.
-	 */
-	getConfig(): BudgetConfig;
+        /**
+         * Get the budget configuration.
+         */
+        getConfig(): BudgetConfig;
 
-	/**
-	 * Update the budget configuration.
-	 */
-	updateConfig(config: Partial<BudgetConfig>): void;
+        /**
+         * Update the budget configuration.
+         */
+        updateConfig(config: Partial<BudgetConfig>): void;
 
-	/**
-	 * Activate emergency stop.
-	 * All subsequent isCallAllowed() checks return false until reset.
-	 */
-	activateEmergencyStop(reason: string): void;
+        /**
+         * Activate emergency stop.
+         * All subsequent isCallAllowed() checks return false until reset.
+         */
+        activateEmergencyStop(reason: string): void;
 
-	/**
-	 * Deactivate emergency stop.
-	 * Allows execution to resume within budget constraints.
-	 */
-	deactivateEmergencyStop(): void;
+        /**
+         * Deactivate emergency stop.
+         * Allows execution to resume within budget constraints.
+         */
+        deactivateEmergencyStop(): void;
 
-	/**
-	 * Check if emergency stop is active.
-	 */
-	isEmergencyStopped(): boolean;
+        /**
+         * Check if emergency stop is active.
+         */
+        isEmergencyStopped(): boolean;
 
-	/**
-	 * Detect runaway loops by analyzing token usage patterns.
-	 * Looks for: escalating burn rate, repeating failed calls,
-	 * costs increasing without progress.
-	 */
-	detectRunawayLoop(): RunawayDetection;
+        /**
+         * Detect runaway loops by analyzing token usage patterns.
+         * Looks for: escalating burn rate, repeating failed calls,
+         * costs increasing without progress.
+         */
+        detectRunawayLoop(): RunawayDetection;
 
-	/**
-	 * Get the cost history for the current execution.
-	 */
-	getCostHistory(): CostRecord[];
+        /**
+         * Get the cost history for the current execution.
+         */
+        getCostHistory(): CostRecord[];
 
-	/**
-	 * Get provider-specific cost breakdown.
-	 */
-	getCostByProvider(): Record<string, { tokens: number; cost: number; callCount: number }>;
+        /**
+         * Get provider-specific cost breakdown.
+         */
+        getCostByProvider(): Record<string, { tokens: number; cost: number; callCount: number }>;
 
-	/**
-	 * Reset the budget for a new execution.
-	 * Clears token and cost counters but preserves configuration.
-	 */
-	resetBudget(): void;
+        /**
+         * Get model-specific cost breakdown.
+         */
+        getCostByModel(): Record<string, { tokens: number; cost: number; callCount: number }>;
 
-	/**
-	 * Project the cost to complete the current plan.
-	 * Based on: tokens used so far, milestones completed,
-	 * average cost per milestone.
-	 */
-	projectCompletionCost(totalMilestones: number, completedMilestones: number): { projectedTokens: number; projectedCost: number };
+        /**
+         * Get cost summary for a time period (since timestamp, default: 30 days ago).
+         */
+        getCostSummary(since?: number): CostSummary;
+
+        /**
+         * Get the time-based budget configuration (daily/monthly limits).
+         */
+        getTimeBudget(): TimeBudget;
+
+        /**
+         * Update the time-based budget configuration.
+         */
+        setTimeBudget(budget: Partial<TimeBudget>): void;
+
+        /**
+         * Check if adding an estimated cost would exceed daily or monthly budget.
+         */
+        wouldExceedBudget(estimatedCost: number): boolean;
+
+        /**
+         * Estimate cost for a model given token counts.
+         */
+        estimateCost(modelId: string, inputTokens: number, outputTokens: number): number;
+
+        /**
+         * Reset the budget for a new execution.
+         * Clears token and cost counters but preserves configuration.
+         */
+        resetBudget(): void;
+
+        /**
+         * Project the cost to complete the current plan.
+         * Based on: tokens used so far, milestones completed,
+         * average cost per milestone.
+         */
+        projectCompletionCost(totalMilestones: number, completedMilestones: number): { projectedTokens: number; projectedCost: number };
 }
 
 export const ICostGovernorService = createDecorator<ICostGovernorService>('costGovernorService');

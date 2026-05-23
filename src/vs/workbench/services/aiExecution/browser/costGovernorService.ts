@@ -4,8 +4,9 @@
  *
  *  CostGovernorService -- Concrete implementation of ICostGovernorService.
  *  Hard cost enforcement for LLM API usage with budget ceilings, emergency
- *  stops, burn-rate monitoring, runaway loop detection, and projected
- *  completion cost estimation.
+ *  stops, burn-rate monitoring, runaway loop detection, projected
+ *  completion cost estimation, daily/monthly budget tracking, model
+ *  pricing estimation, and 30-day auto-pruning of cost records.
  *
  *  HARD RULES:
  *    - Execution MUST HALT when budget exceeded
@@ -25,12 +26,17 @@ import {
 	BudgetSnapshot,
 	CostRecord,
 	RunawayDetection,
+	TimeBudget,
+	CostSummary,
+	ModelPricing,
 } from '../common/costGovernor.js';
 
 // -- Storage keys --
 
 const STORAGE_KEY_BUDGET = 'aiExecution.costGovernor.budget';
 const STORAGE_KEY_CONFIG = 'aiExecution.costGovernor.config';
+const STORAGE_KEY_COST_RECORDS = 'aiExecution.costRecords';
+const STORAGE_KEY_TIME_BUDGET = 'aiExecution.costGovernor.timeBudget';
 
 // -- Default budget configuration --
 
@@ -45,6 +51,14 @@ const DEFAULT_CONFIG: BudgetConfig = {
 	emergencyStop: false,
 };
 
+// -- Default time-based budget --
+
+const DEFAULT_TIME_BUDGET: TimeBudget = {
+	dailyLimitUSD: 10,
+	monthlyLimitUSD: 100,
+	alertThreshold: 0.8,
+};
+
 // -- Internal types for per-minute tracking --
 
 interface TimestampedTokens {
@@ -57,6 +71,44 @@ interface TimestampedCost {
 	cost: number;
 }
 
+// -- Model pricing table (real pricing as of early 2025) --
+
+const MODEL_PRICING: Map<string, ModelPricing> = new Map([
+	// OpenAI models
+	['gpt-4o', { inputPricePerMillion: 2.50, outputPricePerMillion: 10.00 }],
+	['gpt-4o-mini', { inputPricePerMillion: 0.15, outputPricePerMillion: 0.60 }],
+	['gpt-4-turbo', { inputPricePerMillion: 10.00, outputPricePerMillion: 30.00 }],
+	['o1', { inputPricePerMillion: 15.00, outputPricePerMillion: 60.00 }],
+	['o1-mini', { inputPricePerMillion: 3.00, outputPricePerMillion: 12.00 }],
+	['o3-mini', { inputPricePerMillion: 1.10, outputPricePerMillion: 4.40 }],
+	['gpt-3.5-turbo', { inputPricePerMillion: 0.50, outputPricePerMillion: 1.50 }],
+	// Anthropic models
+	['claude-sonnet-4-20250514', { inputPricePerMillion: 3.00, outputPricePerMillion: 15.00 }],
+	['claude-3-5-sonnet-20241022', { inputPricePerMillion: 3.00, outputPricePerMillion: 15.00 }],
+	['claude-3-haiku-20240307', { inputPricePerMillion: 0.25, outputPricePerMillion: 1.25 }],
+	['claude-3-opus-20240229', { inputPricePerMillion: 15.00, outputPricePerMillion: 75.00 }],
+	// Google Gemini models
+	['gemini-2.0-flash', { inputPricePerMillion: 0.075, outputPricePerMillion: 0.30 }],
+	['gemini-2.0-flash-lite', { inputPricePerMillion: 0.075, outputPricePerMillion: 0.30 }],
+	['gemini-1.5-pro', { inputPricePerMillion: 1.25, outputPricePerMillion: 5.00 }],
+	['gemini-1.5-flash', { inputPricePerMillion: 0.075, outputPricePerMillion: 0.30 }],
+	// OpenRouter models (pricing varies, use primary provider pricing)
+	['anthropic/claude-sonnet-4-20250514', { inputPricePerMillion: 3.00, outputPricePerMillion: 15.00 }],
+	['openai/gpt-4o', { inputPricePerMillion: 2.50, outputPricePerMillion: 10.00 }],
+	['google/gemini-2.0-flash', { inputPricePerMillion: 0.075, outputPricePerMillion: 0.30 }],
+	['meta-llama/llama-3-70b-instruct', { inputPricePerMillion: 0.80, outputPricePerMillion: 2.40 }],
+]);
+
+/** Default pricing for unknown models */
+const DEFAULT_MODEL_PRICING: ModelPricing = {
+	inputPricePerMillion: 3.00,
+	outputPricePerMillion: 15.00,
+};
+
+// -- 30-day pruning threshold --
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
 // -- CostGovernorService --
 
 export class CostGovernorService extends Disposable implements ICostGovernorService {
@@ -66,6 +118,7 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 	// -- Private state --
 
 	private config: BudgetConfig = { ...DEFAULT_CONFIG };
+	private timeBudget: TimeBudget = { ...DEFAULT_TIME_BUDGET };
 	private totalTokensUsed: number = 0;
 	private totalCostUsed: number = 0;
 	private costHistory: CostRecord[] = [];
@@ -76,6 +129,10 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 	private emergencyStopReason: string | null = null;
 	private lastCallTimestamp: number = 0;
 	private previousStatus: BudgetStatus = BudgetStatus.Healthy;
+
+	// Track which budget alerts have already been fired to avoid duplicates
+	private dailyAlertFired: boolean = false;
+	private monthlyAlertFired: boolean = false;
 
 	// -- Events --
 
@@ -91,6 +148,12 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 	private readonly _onBurnRateUpdate = this._register(new Emitter<{ tokenRate: number; costRate: number }>());
 	readonly onBurnRateUpdate: Event<{ tokenRate: number; costRate: number }> = this._onBurnRateUpdate.event;
 
+	private readonly _onBudgetAlert = this._register(new Emitter<{ type: 'daily' | 'monthly'; percentage: number; current: number; limit: number }>());
+	readonly onBudgetAlert: Event<{ type: 'daily' | 'monthly'; percentage: number; current: number; limit: number }> = this._onBudgetAlert.event;
+
+	private readonly _onCostRecorded = this._register(new Emitter<CostRecord>());
+	readonly onCostRecorded: Event<CostRecord> = this._onCostRecorded.event;
+
 	// -- Constructor --
 
 	constructor(
@@ -99,6 +162,7 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 	) {
 		super();
 		this.loadFromStorage();
+		this.pruneOldRecords();
 		this.logService.trace('[CostGovernorService] Initialized');
 	}
 
@@ -115,18 +179,30 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 			return false;
 		}
 
-		// (3) Max cost check
+		// (3) Max cost check (per-execution)
 		if (this.config.maxCostUSD > 0 && this.totalCostUsed > this.config.maxCostUSD) {
 			return false;
 		}
 
-		// (4) Cooldown check
+		// (4) Daily budget check
+		const todayCost = this.computeTodayCost();
+		if (this.timeBudget.dailyLimitUSD > 0 && todayCost >= this.timeBudget.dailyLimitUSD) {
+			return false;
+		}
+
+		// (5) Monthly budget check
+		const monthlyCost = this.computeMonthlyCost();
+		if (this.timeBudget.monthlyLimitUSD > 0 && monthlyCost >= this.timeBudget.monthlyLimitUSD) {
+			return false;
+		}
+
+		// (6) Cooldown check
 		const now = Date.now();
 		if (this.lastCallTimestamp > 0 && (now - this.lastCallTimestamp) < this.config.cooldownMs) {
 			return false;
 		}
 
-		// (5) Max tokens per minute check
+		// (7) Max tokens per minute check
 		this.pruneLastMinuteEntries(now);
 		if (this.config.maxTokensPerMinute > 0) {
 			const tokensLastMinute = this.lastMinuteTokens.reduce((sum, e) => sum + e.tokens, 0);
@@ -135,7 +211,7 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 			}
 		}
 
-		// (6) Max cost per minute check
+		// (8) Max cost per minute check
 		if (this.config.maxCostPerMinute > 0) {
 			const costLastMinute = this.lastMinuteCosts.reduce((sum, e) => sum + e.cost, 0);
 			if (costLastMinute > this.config.maxCostPerMinute) {
@@ -186,8 +262,14 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 			this.previousStatus = currentStatus;
 		}
 
+		// Check daily/monthly budget alert thresholds
+		this.checkTimeBudgetAlerts();
+
 		// Fire burn rate update
 		this._onBurnRateUpdate.fire({ tokenRate: this.burnRateTokens, costRate: this.burnRateCost });
+
+		// Fire cost recorded event
+		this._onCostRecorded.fire(record);
 
 		// Persist snapshot to storage
 		this.persistToStorage();
@@ -397,6 +479,115 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 		return result;
 	}
 
+	// -- getCostByModel (NEW) --
+
+	getCostByModel(): Record<string, { tokens: number; cost: number; callCount: number }> {
+		const result: Record<string, { tokens: number; cost: number; callCount: number }> = {};
+
+		for (const record of this.costHistory) {
+			if (!result[record.model]) {
+				result[record.model] = { tokens: 0, cost: 0, callCount: 0 };
+			}
+			result[record.model].tokens += record.inputTokens + record.outputTokens;
+			result[record.model].cost += record.costUSD;
+			result[record.model].callCount++;
+		}
+
+		return result;
+	}
+
+	// -- getCostSummary (NEW) --
+
+	getCostSummary(since?: number): CostSummary {
+		const cutoff = since ?? (Date.now() - THIRTY_DAYS_MS);
+		const filtered = this.costHistory.filter(r => r.timestamp >= cutoff);
+
+		let totalCost = 0;
+		let totalInputTokens = 0;
+		let totalOutputTokens = 0;
+
+		const byProvider = new Map<string, { cost: number; requests: number; tokens: number }>();
+		const byModel = new Map<string, { cost: number; requests: number; tokens: number }>();
+
+		for (const record of filtered) {
+			totalCost += record.costUSD;
+			totalInputTokens += record.inputTokens;
+			totalOutputTokens += record.outputTokens;
+
+			// By provider
+			const prov = byProvider.get(record.providerId) ?? { cost: 0, requests: 0, tokens: 0 };
+			prov.cost += record.costUSD;
+			prov.requests++;
+			prov.tokens += record.inputTokens + record.outputTokens;
+			byProvider.set(record.providerId, prov);
+
+			// By model
+			const mod = byModel.get(record.model) ?? { cost: 0, requests: 0, tokens: 0 };
+			mod.cost += record.costUSD;
+			mod.requests++;
+			mod.tokens += record.inputTokens + record.outputTokens;
+			byModel.set(record.model, mod);
+		}
+
+		return {
+			totalCost,
+			todayCost: this.computeTodayCost(),
+			monthlyCost: this.computeMonthlyCost(),
+			totalInputTokens,
+			totalOutputTokens,
+			requestCount: filtered.length,
+			byProvider,
+			byModel,
+		};
+	}
+
+	// -- getTimeBudget (NEW) --
+
+	getTimeBudget(): TimeBudget {
+		return { ...this.timeBudget };
+	}
+
+	// -- setTimeBudget (NEW) --
+
+	setTimeBudget(budget: Partial<TimeBudget>): void {
+		this.timeBudget = { ...this.timeBudget, ...budget };
+		this.dailyAlertFired = false;
+		this.monthlyAlertFired = false;
+		this.persistTimeBudgetToStorage();
+		this.logService.info(`[CostGovernorService] Time budget updated: daily=$${this.timeBudget.dailyLimitUSD}, monthly=$${this.timeBudget.monthlyLimitUSD}`);
+	}
+
+	// -- wouldExceedBudget (NEW) --
+
+	wouldExceedBudget(estimatedCost: number): boolean {
+		// Check daily budget
+		if (this.timeBudget.dailyLimitUSD > 0) {
+			const todayCost = this.computeTodayCost();
+			if (todayCost + estimatedCost > this.timeBudget.dailyLimitUSD) {
+				return true;
+			}
+		}
+
+		// Check monthly budget
+		if (this.timeBudget.monthlyLimitUSD > 0) {
+			const monthlyCost = this.computeMonthlyCost();
+			if (monthlyCost + estimatedCost > this.timeBudget.monthlyLimitUSD) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	// -- estimateCost (NEW) --
+
+	estimateCost(modelId: string, inputTokens: number, outputTokens: number): number {
+		const pricing = MODEL_PRICING.get(modelId) ?? DEFAULT_MODEL_PRICING;
+		const inputCost = (inputTokens / 1_000_000) * pricing.inputPricePerMillion;
+		const outputCost = (outputTokens / 1_000_000) * pricing.outputPricePerMillion;
+		return inputCost + outputCost;
+	}
+
 	// -- resetBudget --
 
 	resetBudget(): void {
@@ -409,6 +600,8 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 		this.lastMinuteCosts = [];
 		this.lastCallTimestamp = 0;
 		this.previousStatus = BudgetStatus.Healthy;
+		this.dailyAlertFired = false;
+		this.monthlyAlertFired = false;
 		this.persistToStorage();
 		this.logService.info('[CostGovernorService] Budget reset');
 	}
@@ -448,7 +641,7 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 			}
 		}
 
-		// Check cost ceiling
+		// Check cost ceiling (per-execution)
 		if (this.config.maxCostUSD > 0) {
 			const costFraction = this.totalCostUsed / this.config.maxCostUSD;
 			if (costFraction >= 1) {
@@ -459,7 +652,112 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 			}
 		}
 
+		// Check daily budget
+		if (this.timeBudget.dailyLimitUSD > 0) {
+			const todayCost = this.computeTodayCost();
+			const dailyFraction = todayCost / this.timeBudget.dailyLimitUSD;
+			if (dailyFraction >= 1) {
+				return BudgetStatus.Exceeded;
+			}
+			if (dailyFraction >= this.timeBudget.alertThreshold) {
+				return BudgetStatus.Warning;
+			}
+		}
+
+		// Check monthly budget
+		if (this.timeBudget.monthlyLimitUSD > 0) {
+			const monthlyCost = this.computeMonthlyCost();
+			const monthlyFraction = monthlyCost / this.timeBudget.monthlyLimitUSD;
+			if (monthlyFraction >= 1) {
+				return BudgetStatus.Exceeded;
+			}
+			if (monthlyFraction >= this.timeBudget.alertThreshold) {
+				return BudgetStatus.Warning;
+			}
+		}
+
 		return BudgetStatus.Healthy;
+	}
+
+	/**
+	 * Compute total cost for today (since midnight local time).
+	 */
+	private computeTodayCost(): number {
+		const now = new Date();
+		const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+		let todayCost = 0;
+		for (const record of this.costHistory) {
+			if (record.timestamp >= startOfDay) {
+				todayCost += record.costUSD;
+			}
+		}
+		return todayCost;
+	}
+
+	/**
+	 * Compute total cost for this month (since 1st of the month).
+	 */
+	private computeMonthlyCost(): number {
+		const now = new Date();
+		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+		let monthlyCost = 0;
+		for (const record of this.costHistory) {
+			if (record.timestamp >= startOfMonth) {
+				monthlyCost += record.costUSD;
+			}
+		}
+		return monthlyCost;
+	}
+
+	/**
+	 * Check and fire daily/monthly budget alert thresholds.
+	 */
+	private checkTimeBudgetAlerts(): void {
+		// Daily alert
+		if (this.timeBudget.dailyLimitUSD > 0 && !this.dailyAlertFired) {
+			const todayCost = this.computeTodayCost();
+			const percentage = todayCost / this.timeBudget.dailyLimitUSD;
+			if (percentage >= this.timeBudget.alertThreshold) {
+				this.dailyAlertFired = true;
+				this._onBudgetAlert.fire({
+					type: 'daily',
+					percentage,
+					current: todayCost,
+					limit: this.timeBudget.dailyLimitUSD,
+				});
+				this.logService.warn(`[CostGovernorService] Daily budget alert: ${((percentage) * 100).toFixed(1)}% ($${todayCost.toFixed(2)}/$${this.timeBudget.dailyLimitUSD})`);
+			}
+		}
+
+		// Monthly alert
+		if (this.timeBudget.monthlyLimitUSD > 0 && !this.monthlyAlertFired) {
+			const monthlyCost = this.computeMonthlyCost();
+			const percentage = monthlyCost / this.timeBudget.monthlyLimitUSD;
+			if (percentage >= this.timeBudget.alertThreshold) {
+				this.monthlyAlertFired = true;
+				this._onBudgetAlert.fire({
+					type: 'monthly',
+					percentage,
+					current: monthlyCost,
+					limit: this.timeBudget.monthlyLimitUSD,
+				});
+				this.logService.warn(`[CostGovernorService] Monthly budget alert: ${((percentage) * 100).toFixed(1)}% ($${monthlyCost.toFixed(2)}/$${this.timeBudget.monthlyLimitUSD})`);
+			}
+		}
+	}
+
+	/**
+	 * Prune cost records older than 30 days.
+	 */
+	private pruneOldRecords(): void {
+		const cutoff = Date.now() - THIRTY_DAYS_MS;
+		const before = this.costHistory.length;
+		this.costHistory = this.costHistory.filter(r => r.timestamp >= cutoff);
+		const pruned = before - this.costHistory.length;
+		if (pruned > 0) {
+			this.logService.info(`[CostGovernorService] Pruned ${pruned} cost records older than 30 days`);
+			this.persistCostRecordsToStorage();
+		}
 	}
 
 	/**
@@ -501,11 +799,13 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 	}
 
 	/**
-	 * Persist the budget snapshot and config to IStorageService.
+	 * Persist the budget snapshot, config, time budget, and cost records to IStorageService.
 	 */
 	private persistToStorage(): void {
 		this.persistBudgetToStorage();
 		this.persistConfigToStorage();
+		this.persistCostRecordsToStorage();
+		this.persistTimeBudgetToStorage();
 	}
 
 	private persistBudgetToStorage(): void {
@@ -533,8 +833,24 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 		}
 	}
 
+	private persistCostRecordsToStorage(): void {
+		try {
+			this.storageService.store(STORAGE_KEY_COST_RECORDS, JSON.stringify(this.costHistory), StorageScope.WORKSPACE, StorageTarget.MACHINE);
+		} catch (e) {
+			this.logService.warn('[CostGovernorService] Failed to persist cost records to storage', e);
+		}
+	}
+
+	private persistTimeBudgetToStorage(): void {
+		try {
+			this.storageService.store(STORAGE_KEY_TIME_BUDGET, JSON.stringify(this.timeBudget), StorageScope.WORKSPACE, StorageTarget.MACHINE);
+		} catch (e) {
+			this.logService.warn('[CostGovernorService] Failed to persist time budget to storage', e);
+		}
+	}
+
 	/**
-	 * Load budget state and config from IStorageService.
+	 * Load budget state, config, cost records, and time budget from IStorageService.
 	 */
 	private loadFromStorage(): void {
 		try {
@@ -560,6 +876,24 @@ export class CostGovernorService extends Disposable implements ICostGovernorServ
 			}
 		} catch (e) {
 			this.logService.warn('[CostGovernorService] Failed to load config from storage', e);
+		}
+
+		try {
+			const recordsRaw = this.storageService.get(STORAGE_KEY_COST_RECORDS, StorageScope.WORKSPACE);
+			if (recordsRaw) {
+				this.costHistory = JSON.parse(recordsRaw);
+			}
+		} catch (e) {
+			this.logService.warn('[CostGovernorService] Failed to load cost records from storage', e);
+		}
+
+		try {
+			const timeBudgetRaw = this.storageService.get(STORAGE_KEY_TIME_BUDGET, StorageScope.WORKSPACE);
+			if (timeBudgetRaw) {
+				this.timeBudget = { ...DEFAULT_TIME_BUDGET, ...JSON.parse(timeBudgetRaw) };
+			}
+		} catch (e) {
+			this.logService.warn('[CostGovernorService] Failed to load time budget from storage', e);
 		}
 	}
 
