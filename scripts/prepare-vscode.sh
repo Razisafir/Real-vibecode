@@ -55,7 +55,9 @@ done
 
 # Determine VS Code version from our package.json
 if [[ -z "${VSCODE_VERSION}" ]]; then
-    VSCODE_VERSION="$(node -p "require('${PROJECT_ROOT}/package.json').version")"
+    # Read package.json version with a relative path to avoid MSYS path conversion
+    # issues on Windows where /d/a/... becomes D:\d\a\... in Node.js
+    VSCODE_VERSION="$(cd "${PROJECT_ROOT}" && node -p "require('./package.json').version")"
     log_info "Using version from package.json: ${VSCODE_VERSION}"
 fi
 
@@ -94,11 +96,16 @@ log_info "Applying VibeCode branding patches..."
 # Override product.json with VibeCode branding
 VIBECODE_PRODUCT_JSON="${PROJECT_ROOT}/product.json"
 if [[ -f "${VIBECODE_PRODUCT_JSON}" ]]; then
+    # Copy our branded product.json into the VS Code source directory so Node.js
+    # can read it using a relative path (avoids MSYS/Git Bash path conversion
+    # issues on Windows where /d/a/... becomes D:\d\a\... in Node.js).
+    cp "${VIBECODE_PRODUCT_JSON}" ./vibecode-product.json
+
     # Merge our product.json overrides into VS Code's product.json
     node -e "
 const fs = require('fs');
 const vscodeProduct = JSON.parse(fs.readFileSync('product.json', 'utf8'));
-const vibecodeProduct = JSON.parse(fs.readFileSync('${VIBECODE_PRODUCT_JSON}', 'utf8'));
+const vibecodeProduct = JSON.parse(fs.readFileSync('vibecode-product.json', 'utf8'));
 
 // Override branding fields
 vscodeProduct.nameShort = vibecodeProduct.nameShort;
@@ -152,6 +159,9 @@ console.log('  applicationName:', vscodeProduct.applicationName);
 console.log('  win32DirName:', vscodeProduct.win32DirName);
 "
     log_success "product.json patched with VibeCode branding"
+
+    # Clean up temporary copy
+    rm -f ./vibecode-product.json
 fi
 
 # Step 3: Disable Microsoft telemetry

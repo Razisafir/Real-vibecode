@@ -365,7 +365,8 @@ copy_build_output() {
         # Do NOT overwrite our product.json — the one in vscode-source was already
         # patched by prepare-vscode.sh, but to be safe we verify it has VibeCode branding.
         # If VS Code's compile step somehow reset product.json, we must keep our branded version.
-        if node -e "const p = require('${vscode_source}/product.json'); process.exit(p.nameShort === 'VibeCode' ? 0 : 1)" 2>/dev/null; then
+        # Use relative path in a subshell to avoid MSYS path conversion issues on Windows.
+        if (cd "${vscode_source}" && node -e "const p = require('./product.json'); process.exit(p.nameShort === 'VibeCode' ? 0 : 1)"); then
             cp "${vscode_source}/product.json" "${PROJECT_ROOT}/product.json"
             log_success "Verified product.json has VibeCode branding — copied"
         else
