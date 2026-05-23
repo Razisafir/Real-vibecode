@@ -8,5 +8,5 @@ Type=Application
 NoDisplay=true
 StartupNotify=true
 Categories=Utility;TextEditor;Development;IDE;
-MimeType=x-scheme-handler/real-vibecode;
+MimeType=x-scheme-handler/vibecode;
 Keywords=real-vibecode;ai;editor;

@@ -2,6 +2,6 @@
 setlocal
 set VSCODE_DEV=
 set ELECTRON_RUN_AS_NODE=1
-"%~dp0..\real-vibecode.exe" "%~dp0..\@@VERSIONFOLDER@@\resources\app\out\cli.js" %*
+"%~dp0..\RealVibecode.exe" "%~dp0..\@@VERSIONFOLDER@@\resources\app\out\cli.js" %*
 IF %ERRORLEVEL% NEQ 0 EXIT /b %ERRORLEVEL%
 endlocal

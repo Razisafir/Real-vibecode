@@ -7,8 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to build (e.g. 1.121.1)"
-        required: true
+        description: "VS Code version to build from (e.g. 1.121.1)"
+        required: false
+        default: "1.121.1"
+      platform:
+        description: "Platform to build (win / mac / linux / all)"
+        required: false
+        default: "all"
       skip_sign:
         description: "Skip code signing"
         type: boolean
@@ -18,62 +23,39 @@ permissions:
   contents: write
 
 env:
-  # Increase Node.js memory for VS Code compilation
   NODE_OPTIONS: "--max-old-space-size=8192"
+  VSCODE_VERSION: ${{ github.event.inputs.version || '1.121.1' }}
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            platform: win
-            artifact: windows
-          - os: macos-latest
-            platform: mac
-            artifact: macos
-          - os: ubuntu-latest
-            platform: linux
-            artifact: linux
-
-    runs-on: ${{ matrix.os }}
+  # ─── Windows ────────────────────────────────────────────────────────────────
+  build-windows:
+    if: github.event.inputs.platform == 'win' || github.event.inputs.platform == 'all' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-2022
     timeout-minutes: 120
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: "3.x"
 
-      - name: Setup Yarn
+      - name: Install Yarn
         run: npm install -g yarn
-
-      - name: Install Linux dependencies
-        if: matrix.platform == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxkbfile-dev libsecret-1-0 libkrb5-dev libxss1 libgbm1 rpm
 
       - name: Cache VS Code source
         uses: actions/cache@v4
         with:
           path: vscode-source
-          key: vscode-source-${{ hashFiles('package.json') }}-${{ runner.os }}
+          key: vscode-${{ env.VSCODE_VERSION }}-win-${{ hashFiles('product.json') }}
           restore-keys: |
-            vscode-source-${{ hashFiles('package.json') }}-
-            vscode-source-
+            vscode-${{ env.VSCODE_VERSION }}-win-
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -81,34 +63,130 @@ jobs:
           path: |
             node_modules
             vscode-source/node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('package.json') }}
+          key: nm-win-${{ hashFiles('package.json') }}
           restore-keys: |
-            node-modules-${{ runner.os }}-
+            nm-win-
 
       - name: Prepare VS Code source
-        run: bash scripts/prepare-vscode.sh
+        run: bash scripts/prepare-vscode.sh --version ${{ env.VSCODE_VERSION }}
+        shell: bash
+
+      - name: Install project dependencies
+        run: yarn install --frozen-lockfile || yarn install
+        shell: bash
+        working-directory: .
+
+      - name: Compile VS Code source
+        run: |
+          cd vscode-source
+          yarn compile 2>&1 | tail -30
+        shell: bash
+
+      - name: Copy compiled output
+        run: |
+          rm -rf out 2>/dev/null || true
+          cp -r vscode-source/out ./out
+          cp vscode-source/product.json ./product.json
+        shell: bash
+
+      - name: Install Electron
+        run: npx electron-builder install-app-deps
         shell: bash
         env:
-          VSCODE_VERSION: ${{ github.event.inputs.version || '1.121.1' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compile source
-        run: bash scripts/build-desktop.sh --platform ${{ matrix.platform }} --skip-prepare
-        shell: bash
-        env:
-          NODE_ENV: production
-
-      - name: Package (Windows)
-        if: matrix.platform == 'win'
-        run: npx electron-builder --win --publish never
+      - name: Build Windows installer (NSIS)
+        run: npx electron-builder --win --x64 --publish never
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
-      - name: Package (macOS)
-        if: matrix.platform == 'mac'
-        run: npx electron-builder --mac --publish never
+      - name: List build artifacts
+        shell: pwsh
+        run: Get-ChildItem -Path dist -Recurse -File | ForEach-Object { Write-Output "$($_.Name)  ($([math]::Round($_.Length/1MB, 1)) MB)" }
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
+          if-no-files-found: warn
+          retention-days: 30
+
+  # ─── macOS ──────────────────────────────────────────────────────────────────
+  build-macos:
+    if: github.event.inputs.platform == 'mac' || github.event.inputs.platform == 'all' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-14
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Cache VS Code source
+        uses: actions/cache@v4
+        with:
+          path: vscode-source
+          key: vscode-${{ env.VSCODE_VERSION }}-mac-${{ hashFiles('product.json') }}
+          restore-keys: |
+            vscode-${{ env.VSCODE_VERSION }}-mac-
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            vscode-source/node_modules
+          key: nm-mac-${{ hashFiles('package.json') }}
+          restore-keys: |
+            nm-mac-
+
+      - name: Prepare VS Code source
+        run: bash scripts/prepare-vscode.sh --version ${{ env.VSCODE_VERSION }}
+        shell: bash
+
+      - name: Install project dependencies
+        run: yarn install --frozen-lockfile || yarn install
+        shell: bash
+
+      - name: Compile VS Code source
+        run: |
+          cd vscode-source
+          yarn compile 2>&1 | tail -30
+        shell: bash
+
+      - name: Copy compiled output
+        run: |
+          rm -rf out 2>/dev/null || true
+          cp -r vscode-source/out ./out
+          cp vscode-source/product.json ./product.json
+        shell: bash
+
+      - name: Install Electron
+        run: npx electron-builder install-app-deps
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build macOS DMG
+        run: npx electron-builder --mac --x64 --arm64 --publish never
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -118,46 +196,157 @@ jobs:
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-      - name: Package (Linux)
-        if: matrix.platform == 'linux'
-        run: npx electron-builder --linux --publish never
+      - name: List build artifacts
+        run: find dist -type f -exec ls -lh {} \;
         shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload artifacts
+      - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
+          name: macos-universal
           path: |
-            dist/*.exe
             dist/*.dmg
             dist/*.zip
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.rpm
+            dist/*.blockmap
+            dist/latest-mac.yml
           if-no-files-found: warn
           retention-days: 30
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-
+  # ─── Linux ──────────────────────────────────────────────────────────────────
+  build-linux:
+    if: github.event.inputs.platform == 'linux' || github.event.inputs.platform == 'all' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbfile-dev libsecret-1-dev libkrb5-dev libxss1 libgbm1 rpm
+
+      - name: Cache VS Code source
+        uses: actions/cache@v4
+        with:
+          path: vscode-source
+          key: vscode-${{ env.VSCODE_VERSION }}-linux-${{ hashFiles('product.json') }}
+          restore-keys: |
+            vscode-${{ env.VSCODE_VERSION }}-linux-
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            vscode-source/node_modules
+          key: nm-linux-${{ hashFiles('package.json') }}
+          restore-keys: |
+            nm-linux-
+
+      - name: Prepare VS Code source
+        run: bash scripts/prepare-vscode.sh --version ${{ env.VSCODE_VERSION }}
+        shell: bash
+
+      - name: Install project dependencies
+        run: yarn install --frozen-lockfile || yarn install
+        shell: bash
+
+      - name: Compile VS Code source
+        run: |
+          cd vscode-source
+          yarn compile 2>&1 | tail -30
+        shell: bash
+
+      - name: Copy compiled output
+        run: |
+          rm -rf out 2>/dev/null || true
+          cp -r vscode-source/out ./out
+          cp vscode-source/product.json ./product.json
+        shell: bash
+
+      - name: Install Electron
+        run: npx electron-builder install-app-deps
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Linux packages
+        run: npx electron-builder --linux --x64 --publish never
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List build artifacts
+        run: find dist -type f -exec ls -lh {} \;
+        shell: bash
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
+            dist/*.blockmap
+            dist/latest-linux.yml
+          if-no-files-found: warn
+          retention-days: 30
+
+  # ─── Release ────────────────────────────────────────────────────────────────
+  release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: release-assets
 
-      - name: Create Release
+      - name: List release assets
+        run: find release-assets -type f | sort
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: release-assets/**/*
-          generate_release_notes: true
+          body: |
+            ## Real Vibecode ${{ github.ref_name }}
+
+            ### Downloads
+
+            | Platform | File | Notes |
+            |----------|------|-------|
+            | Windows x64 | `RealVibecode-Setup-*.exe` | NSIS installer (recommended) |
+            | macOS x64/ARM | `RealVibecode-*.dmg` | Universal binary |
+            | Linux x64 | `RealVibecode-*.AppImage` | Portable — chmod +x and run |
+            | Linux x64 | `RealVibecode-*.deb` | Debian/Ubuntu package |
+            | Linux x64 | `RealVibecode-*.rpm` | Fedora/RHEL package |
+
+            > ⚠️ **Windows**: You may see a SmartScreen warning because the app is not code-signed yet.
+            > Click **"More info"** → **"Run anyway"** to proceed.
+
+            > ⚠️ **macOS**: Right-click the app → **"Open"** the first time.
+            > Go to **System Settings → Privacy & Security** to allow if blocked.
+
+            ---
+
+            Built from VS Code `${{ env.VSCODE_VERSION }}` source.
           draft: false
           prerelease: false
         env:

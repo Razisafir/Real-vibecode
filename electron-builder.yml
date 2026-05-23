@@ -112,8 +112,8 @@ win:
   executableName: RealVibecode
   legalTrademarks: "Real Vibecode is a trademark of the Real Vibecode Project."
   requestedExecutionLevel: asInvoker
-  verifyUpdateCodeSignature: true
-  signAndEditExecutable: true
+  verifyUpdateCodeSignature: false  # No code signing certificate yet
+  signAndEditExecutable: false  # Set to true when CSC_LINK is available
   target:
     - target: nsis
       arch:
@@ -146,7 +146,7 @@ nsis:
   shortcutName: "Real Vibecode"
   artifactName: "RealVibecode-Setup-${version}-${arch}.${ext}"
   include: build/win32/installer.nsh
-  guid: "RealVibecode" # Matches win32RegValueName from product.json
+  guid: "{A3D8C7E1-4B5F-6A9D-8E2C-7F3B1A6D9C04}" # Matches win32x64AppId from product.json
   deleteAppDataOnUninstall: false
   runAfterFinish: true
   menuCategory: true
