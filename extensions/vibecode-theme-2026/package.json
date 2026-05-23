@@ -1,0 +1,37 @@
+{
+  "name": "vibecode-theme-2026",
+  "displayName": "VibeCode 2026 Themes",
+  "description": "Official VibeCode color themes with brand colors — Dark 2026 and Light 2026",
+  "version": "1.121.1",
+  "publisher": "vibecode",
+  "license": "Proprietary - Free to Use",
+  "engines": {
+    "vscode": "*"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "keywords": [
+    "vibecode",
+    "dark",
+    "light",
+    "2026",
+    "brand",
+    "purple"
+  ],
+  "icon": "icon.png",
+  "contributes": {
+    "themes": [
+      {
+        "label": "VibeCode Dark 2026",
+        "uiTheme": "vs-dark",
+        "path": "./themes/dark-2026.json"
+      },
+      {
+        "label": "VibeCode Light 2026",
+        "uiTheme": "vs",
+        "path": "./themes/light-2026.json"
+      }
+    ]
+  }
+}

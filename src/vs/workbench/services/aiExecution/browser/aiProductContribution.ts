@@ -92,7 +92,7 @@ import { IQuickInputService } from '../../../../platform/quickinput/common/quick
 import { ILLMStreamingService, LLMRequest, LLMMessage, KNOWN_PROVIDER_CONFIGS } from '../common/llmProvider.js';
 
 // Execution graph for Knowledge Graph data source
-import { IExecutionGraphService } from '../common/executionGraphService.js';
+import { IExecutionGraphService, IExecutionNode, ExecutionNodeType } from '../common/executionGraphService.js';
 
 // =====================================================================================
 // CONSTANTS
@@ -257,9 +257,9 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
         properties: {
                 'aiExecution.theme': {
                         type: 'string',
-                        enum: ['dark', 'deepblue', 'light', 'highcontrast', 'vibecode-2026-dark', 'vibecode-2026-light'],
-                        default: 'vibecode-2026-dark',
-                        description: 'Color theme for AI Execution panels. VibeCode 2026 themes use the official brand palette.',
+                        enum: ['dark', 'deepblue', 'light', 'highcontrast', 'VibeCode Dark 2026', 'VibeCode Light 2026'],
+                        default: 'VibeCode Dark 2026',
+                        description: 'Color theme for AI Execution panels. VibeCode 2026 themes use the official brand palette and appear in the VS Code theme picker (Ctrl+K Ctrl+T).',
                         scope: ConfigurationScope.APPLICATION,
                 },
                 'aiExecution.executionMode': {
@@ -662,6 +662,9 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
         /** Reference to the active Jarvis chat webview for posting LLM responses */
         private _jarvisWebview: { postMessage(msg: any): Thenable<boolean> } | null = null;
 
+        /** Reference to the active projects webview for refreshing project list */
+        private _activeProjectsWebview: { postMessage(msg: any): Thenable<boolean>; html: string } | null = null;
+
         /** Conversation history for Jarvis chat context */
         private _jarvisConversationHistory: LLMMessage[] = [];
 
@@ -698,6 +701,8 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                 @IExecutionGraphService private readonly executionGraphService: IExecutionGraphService,
                 // QuickInput for API key configuration UI
                 @IQuickInputService private readonly quickInputService: IQuickInputService,
+                // Command service for view focus operations
+                @ICommandService private readonly commandService: ICommandService,
         ) {
                 super();
 
@@ -778,9 +783,15 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                         resolve: async (webviewView: WebviewView, token: CancellationToken) => {
                                 webviewView.webview.options = { enableScripts: true, localResourceRoots: [] };
                                 webviewView.webview.html = this.getProjectsHTML();
+                                this._activeProjectsWebview = webviewView.webview;
                                 webviewView.webview.onDidReceiveMessage((msg: { type: string; [key: string]: any }) => {
                                         if (msg.type === 'openProject') {
-                                                this.logService.info(`[AIProduct] Opening project: ${msg.name}`);
+                                                this.handleOpenProject(msg.projectId, msg.projectName, msg.projectPath);
+                                        } else if (msg.type === 'createNewProject') {
+                                                this.handleCreateNewProject();
+                                        } else if (msg.type === 'refreshProjects') {
+                                                // Re-render the projects list
+                                                webviewView.webview.html = this.getProjectsHTML();
                                         }
                                 });
                         },
@@ -1139,6 +1150,15 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                                 this.handleRefineIdea(msg.idea);
                                 break;
                         }
+                        case 'loadProject': {
+                                // Handle loadProject from projects sidebar — restore project state in workflow
+                                if (msg.project) {
+                                        this.storageService.store(STORAGE_KEY_PROJECT, JSON.stringify({ name: msg.project.name, path: msg.project.path, description: '' }), -1 /* StorageScope.APPLICATION */, 0 /* StorageTarget.USER */);
+                                        this.storageService.store(STORAGE_KEY_STEP, 1, -1 /* StorageScope.APPLICATION */, 0 /* StorageTarget.USER */);
+                                        this.logService.info(`[AIProduct] Project loaded via sidebar: ${msg.project.name}`);
+                                }
+                                break;
+                        }
                         case 'setConstraints': {
                                 this.handleSetConstraints(msg.constraints);
                                 break;
@@ -1337,6 +1357,54 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
         // PHASE 25 MESSAGE HANDLERS
         // Each handler wires a webview action to one or more Phase 25 services.
         // =================================================================================
+
+        /**
+         * Handle clicking a project in the Projects sidebar.
+         * Loads the project via IProjectMemoryService, posts a loadProject
+         * message to the workflow webview, and focuses the workflow view.
+         */
+        private async handleOpenProject(projectId: string, projectName: string, projectPath: string): Promise<void> {
+                this.logService.info(`[AIProduct] Opening project: ${projectName} (${projectId})`);
+                try {
+                        // Load the project in the memory service
+                        const loaded = await this.projectMemoryService.loadProject(projectId);
+                        if (!loaded) {
+                                this.logService.warn(`[AIProduct] Failed to load project: ${projectId}`);
+                        }
+
+                        // Persist as current project in storage (same format as createProject)
+                        const projectData = { name: projectName, path: projectPath, description: '' };
+                        this.storageService.store(STORAGE_KEY_PROJECT, JSON.stringify(projectData), -1 /* StorageScope.APPLICATION */, 0 /* StorageTarget.USER */);
+
+                        // Post a loadProject message to the workflow webview
+                        if (this._activeWebview) {
+                                this._activeWebview.postMessage({
+                                        type: 'loadProject',
+                                        project: { id: projectId, name: projectName, path: projectPath },
+                                });
+                        }
+
+                        // Focus the AI Workflow view
+                        this.commandService.executeCommand(`${AI_WORKFLOW_VIEW_ID}.focus`);
+
+                        this.logService.info(`[AIProduct] Project ${projectName} opened and workflow focused`);
+                } catch (err) {
+                        this.logService.error('[AIProduct] Failed to open project:', err);
+                }
+        }
+
+        /**
+         * Handle "Create New" button click in the Projects sidebar.
+         * Focuses the AI Workflow view so the user can create a new project.
+         */
+        private handleCreateNewProject(): void {
+                this.logService.info('[AIProduct] Create new project requested — focusing AI Workflow view');
+                try {
+                        this.commandService.executeCommand(`${AI_WORKFLOW_VIEW_ID}.focus`);
+                } catch (err) {
+                        this.logService.error('[AIProduct] Failed to focus workflow view:', err);
+                }
+        }
 
         private async handleRefineIdea(idea: string): Promise<void> {
                 this.logService.info('[AIProduct] Refining idea via LLM provider');
@@ -1694,6 +1762,14 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                                 latency: health.latency,
                         });
                 }));
+
+                // Project memory changes — refresh the projects sidebar
+                this._register(this.projectMemoryService.onDidChangeMemory((projectId: string) => {
+                        this.logService.info(`[AIProduct] Project memory changed: ${projectId}`);
+                        if (this._activeProjectsWebview) {
+                                this._activeProjectsWebview.html = this.getProjectsHTML();
+                        }
+                }));
         }
 
         // =================================================================================
@@ -1860,71 +1936,148 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
 
         /**
          * Returns HTML for the Projects sidebar view.
+         * Reads all projects from IProjectMemoryService and renders
+         * a clickable list with status, relative creation date, and total count.
          */
         private getProjectsHTML(): string {
-                const saved = this.storageService.get(STORAGE_KEY_PROJECT, undefined);
-                let projectList = '';
-                if (saved) {
-                        try {
-                                const project = JSON.parse(saved);
-                                const icon = renderIcon('project', 16);
-                                projectList = `
-<div style="padding:8px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--vscode-panel-border);">
-  ${icon}
-  <div style="flex:1;">
-    <div style="font-size:13px;font-weight:500;">${project.name}</div>
-    <div style="font-size:11px;color:var(--vscode-descriptionForeground);">${project.description || 'No description'}</div>
-  </div>
-  <span style="font-size:10px;color:var(--vscode-testing-iconPassed);">Active</span>
-</div>`;
-                        } catch { /* ignore */ }
+                let projects: { projectId: string; projectName: string; projectPath: string; createdAt: number; updatedAt: number }[] = [];
+                try {
+                        const allProjects = this.projectMemoryService.getAllProjects();
+                        projects = allProjects.map(p => ({
+                                projectId: p.projectId,
+                                projectName: p.projectName,
+                                projectPath: p.projectPath,
+                                createdAt: p.createdAt,
+                                updatedAt: p.updatedAt,
+                        }));
+                } catch {
+                        // Fallback: try reading the single saved project from storage
+                        const saved = this.storageService.get(STORAGE_KEY_PROJECT, undefined);
+                        if (saved) {
+                                try {
+                                        const project = JSON.parse(saved);
+                                        projects = [{
+                                                projectId: project.name || 'unknown',
+                                                projectName: project.name || 'Unknown',
+                                                projectPath: project.path || '',
+                                                createdAt: Date.now(),
+                                                updatedAt: Date.now(),
+                                        }];
+                                } catch { /* ignore */ }
+                        }
                 }
 
-                if (!projectList) {
-                        const emptyIcon = renderIcon('folder', 32);
+                const currentProjectId = this.projectMemoryService.currentProjectId;
+                const projectIcon = renderIcon('project', 16);
+                const folderIcon = renderIcon('folder', 32);
+                const plusIcon = renderIcon('add', 14);
+
+                let projectList = '';
+                if (projects.length > 0) {
+                        for (const project of projects) {
+                                const isActive = project.projectId === currentProjectId;
+                                const relTime = this.getRelativeTime(project.createdAt);
+                                const statusColor = isActive ? '#10b981' : '#8b8b8b';
+                                const statusLabel = isActive ? 'Active' : 'Inactive';
+                                const statusBg = isActive ? 'rgba(16,185,129,0.1)' : 'rgba(139,139,139,0.1)';
+                                projectList += `
+<div style="padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--vscode-panel-border);cursor:pointer;transition:background 0.1s;"
+     onmouseover="this.style.background='var(--vscode-list-hoverBackground)'"
+     onmouseout="this.style.background='transparent'"
+     onclick="openProject('${project.projectId}','${project.projectName.replace(/'/g, "\\'")}','${project.projectPath.replace(/'/g, "\\'")}')">
+  ${projectIcon}
+  <div style="flex:1;min-width:0;">
+    <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${project.projectName}</div>
+    <div style="font-size:11px;color:var(--vscode-descriptionForeground);display:flex;gap:8px;align-items:center;">
+      <span>${relTime}</span>
+      <span style="font-size:9px;padding:1px 5px;border-radius:8px;background:${statusBg};color:${statusColor};">${statusLabel}</span>
+    </div>
+  </div>
+</div>`;
+                        }
+                } else {
                         projectList = `
 <div style="display:flex;flex-direction:column;align-items:center;padding:48px 16px;text-align:center;">
-  <div style="color:var(--vscode-disabledForeground);margin-bottom:12px;">${emptyIcon}</div>
+  <div style="color:var(--vscode-disabledForeground);margin-bottom:12px;">${folderIcon}</div>
   <div style="font-size:14px;font-weight:500;">No projects yet</div>
   <div style="font-size:12px;color:var(--vscode-descriptionForeground);margin-top:4px;">Create a project in the AI Workflow panel</div>
 </div>`;
                 }
 
+                const countBadge = projects.length > 0
+                        ? `<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:var(--vscode-badge-background);color:var(--vscode-badge-foreground);">${projects.length}</span>`
+                        : '';
+
                 return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><style>
 body { font-family: var(--vscode-font-family); margin: 0; padding: 0; background: var(--vscode-sideBar-background); color: var(--vscode-foreground); }
-</style></head><body>${projectList}</body></html>`;
+.header { padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--vscode-panel-border); }
+.header-title { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--vscode-descriptionForeground);display:flex;align-items:center;gap:6px; }
+.create-btn { font-size:11px;padding:2px 8px;border-radius:3px;background:var(--vscode-button-background);color:var(--vscode-button-foreground);border:none;cursor:pointer;display:flex;align-items:center;gap:4px; }
+.create-btn:hover { background:var(--vscode-button-hoverBackground); }
+</style></head><body>
+<div class="header">
+  <span class="header-title">Projects ${countBadge}</span>
+  <button class="create-btn" onclick="createNewProject()">${plusIcon} New</button>
+</div>
+${projectList}
+<script>
+const vscode = acquireVsCodeApi();
+function openProject(id, name, path) {
+  vscode.postMessage({ type: 'openProject', projectId: id, projectName: name, projectPath: path });
+}
+function createNewProject() {
+  vscode.postMessage({ type: 'createNewProject' });
+}
+</script>
+</body></html>`;
         }
 
         /**
          * Returns HTML for the Timeline sidebar view.
          */
         private getTimelineHTML(): string {
-                const historyJson = this.storageService.get(STORAGE_KEY_HISTORY, undefined);
+                // Get real execution graph data
+                let nodes: IExecutionNode[] = [];
+                try {
+                        nodes = this.executionGraphService.getRecentNodes(20) ?? [];
+                } catch { /* fallback to storage */ }
+
                 let timeline = '';
-                if (historyJson) {
-                        try {
-                                const entries = JSON.parse(historyJson);
-                                for (const entry of entries.slice(-10)) {
-                                        timeline += `
-<div style="display:flex;gap:8px;padding:6px 0;">
-  <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:var(--vscode-button-background);"></div>
-  <div style="flex:1;">
-    <div style="font-size:12px;">${entry.title}</div>
-    <div style="font-size:10px;color:var(--vscode-descriptionForeground);">${entry.time}</div>
-  </div>
+                if (nodes.length > 0) {
+                        for (const node of nodes) {
+                                const relTime = this.getRelativeTime(node.createdAt);
+                                const statusColor = node.rolledBack
+                                        ? '#f59e0b' // amber for rolled back
+                                        : node.success
+                                                ? '#10b981' // green for success
+                                                : node.pending
+                                                        ? '#8b5cf6' // purple for pending
+                                                        : '#ef4444'; // red for failed
+                                const statusIcon = node.rolledBack ? '↩' : node.success ? '✓' : node.pending ? '◎' : '✗';
+                                const typeLabel = this.getNodeTypeLabel(node.type);
+                                timeline += `
+<div style="display:flex;gap:8px;padding:6px 8px;border-bottom:1px solid var(--vscode-panel-border);">
+    <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${statusColor};"></div>
+    <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${node.label}</div>
+        <div style="font-size:10px;color:var(--vscode-descriptionForeground);display:flex;gap:8px;">
+            <span>${typeLabel}</span>
+            <span>${relTime}</span>
+            <span style="color:${statusColor};">${statusIcon}</span>
+        </div>
+    </div>
 </div>`;
-                                }
-                        } catch { /* ignore */ }
+                        }
                 }
 
                 if (!timeline) {
                         const emptyIcon = renderIcon('history', 32);
                         timeline = `
 <div style="display:flex;flex-direction:column;align-items:center;padding:48px 16px;text-align:center;">
-  <div style="color:var(--vscode-disabledForeground);margin-bottom:12px;">${emptyIcon}</div>
-  <div style="font-size:14px;font-weight:500;">No execution history</div>
-  <div style="font-size:12px;color:var(--vscode-descriptionForeground);margin-top:4px;">Execute a plan to see timeline entries</div>
+    <div style="color:var(--vscode-disabledForeground);margin-bottom:12px;">${emptyIcon}</div>
+    <div style="font-size:14px;font-weight:500;">No execution history</div>
+    <div style="font-size:12px;color:var(--vscode-descriptionForeground);margin-top:4px;">Execute a plan to see timeline entries</div>
 </div>`;
                 }
 
@@ -1932,6 +2085,30 @@ body { font-family: var(--vscode-font-family); margin: 0; padding: 0; background
 <html><head><meta charset="UTF-8"><style>
 body { font-family: var(--vscode-font-family); margin: 0; padding: 8px; background: var(--vscode-sideBar-background); color: var(--vscode-foreground); }
 </style></head><body>${timeline}</body></html>`;
+        }
+
+        private getRelativeTime(timestamp: number): string {
+                const diff = Date.now() - timestamp;
+                if (diff < 60000) return 'just now';
+                if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+                if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+                return `${Math.floor(diff / 86400000)}d ago`;
+        }
+
+        private getNodeTypeLabel(type: ExecutionNodeType): string {
+                switch (type) {
+                        case ExecutionNodeType.FileEdit: return 'File Edit';
+                        case ExecutionNodeType.WorkspaceEdit: return 'Workspace Edit';
+                        case ExecutionNodeType.Save: return 'Save';
+                        case ExecutionNodeType.Formatter: return 'Formatter';
+                        case ExecutionNodeType.Refactor: return 'Refactor';
+                        case ExecutionNodeType.AiAction: return 'AI Gen';
+                        case ExecutionNodeType.SystemAction: return 'System';
+                        case ExecutionNodeType.TerminalExecution: return 'Terminal';
+                        case ExecutionNodeType.CodeAction: return 'Code Action';
+                        case ExecutionNodeType.Snippet: return 'Snippet';
+                        default: return 'Action';
+                }
         }
 
         // =================================================================================

@@ -8,11 +8,11 @@
  *  No fictional absorption. No dead side-effect imports. Every registered
  *  singleton has its constructor dependencies also registered.
  *
- *  REGISTERED SINGLETONS (28):
+ *  REGISTERED SINGLETONS (29):
  *    EXECUTION (6):  AutonomousExecutionLoop, TerminalExecutionBridge, TerminalSessionManager,
  *                     AutonomousExecution, ExecutionSandbox, ExecutionGraph
  *    EDITING (2):    TransactionalEdit, CodeEditing
- *    LLM (4):        LLMProvider, ModelRegistry, CredentialStore, ProviderHealth
+ *    LLM (5):        LLMProvider, ModelRegistry, CredentialStore, ProviderHealth, DynamicModelDiscovery
  *    MEMORY (2):     ProjectMemory, LongHorizonMemory
  *    SAFETY (4):     CostGovernor, ExecutionLock, CommandSafety, ExecutionSanity
  *    REPAIR (2):     RepairIntelligence, AutonomousRepair
@@ -55,9 +55,10 @@ import { TransactionalEditService } from './transactionalEditService.js';
 import { ICodeEditingService } from '../common/codeEditing.js';
 import { CodeEditingService } from './codeEditingService.js';
 
-// ---- LLM (4) ----
-import { ILLMProviderService, IModelRegistryService, ICredentialStoreService, IProviderHealthService } from '../common/llmProvider.js';
+// ---- LLM (5) ----
+import { ILLMProviderService, IModelRegistryService, ICredentialStoreService, IProviderHealthService, IDynamicModelDiscoveryService } from '../common/llmProvider.js';
 import { LLMProviderService, ModelRegistryService, CredentialStoreService, ProviderHealthService } from './llmProviderService.js';
+import { DynamicModelDiscoveryService } from './dynamicModelDiscoveryService.js';
 
 // ---- MEMORY (2) ----
 import { IProjectMemoryService } from '../common/projectMemory.js';
@@ -117,6 +118,10 @@ import { AgentOrchestratorService } from './agentOrchestratorService.js';
 import { IAIContextService } from '../common/aiContextService.js';
 import { AIContextService } from './aiContextService.js';
 
+// ---- ROLLBACK (1) — actual undo/restore operations for execution graph nodes ----
+import { IRollbackEngineService } from '../common/rollbackEngine.js';
+import { RollbackEngineService } from './rollbackEngineService.js';
+
 // ---- VISUALIZATION (2) — render graph/memory as HTML for webviews ----
 import { IKnowledgeGraphVisualizationService } from './knowledgeGraphVisualizationService.js';
 import { KnowledgeGraphVisualizationService } from './knowledgeGraphVisualizationService.js';
@@ -125,6 +130,18 @@ import { MemoryVisualizationService } from './memoryVisualizationService.js';
 
 // ---- Real UI Product Contribution ----
 import './aiProductContribution.js';
+
+// ---- VibeCode Theme Registration ----
+// Registers VibeCode Dark 2026 and Light 2026 in the VS Code theme picker
+import './vibecodeThemes.contribution.js';
+
+// ---- Execution Progress Indicator (status bar) ----
+// Shows animated progress in the status bar when AI is executing autonomously
+import './executionProgressContribution.js';
+
+// ---- AI Service Error Handler (error boundaries) ----
+// Wraps AI service calls with error recovery, notifications, and graceful degradation
+import './aiServiceErrorHandler.js';
 
 // =====================================================================
 // SINGLETON REGISTRATIONS
@@ -147,11 +164,12 @@ registerSingleton(IExecutionGraphService, ExecutionGraphService, InstantiationTy
 registerSingleton(ITransactionalEditService, TransactionalEditService, InstantiationType.Delayed);
 registerSingleton(ICodeEditingService, CodeEditingService, InstantiationType.Delayed);
 
-// LLM (4)
+// LLM (5)
 registerSingleton(ILLMProviderService, LLMProviderService, InstantiationType.Delayed);
 registerSingleton(IModelRegistryService, ModelRegistryService, InstantiationType.Delayed);
 registerSingleton(ICredentialStoreService, CredentialStoreService, InstantiationType.Delayed);
 registerSingleton(IProviderHealthService, ProviderHealthService, InstantiationType.Delayed);
+registerSingleton(IDynamicModelDiscoveryService, DynamicModelDiscoveryService, InstantiationType.Eager);
 
 // MEMORY (2)
 registerSingleton(IProjectMemoryService, ProjectMemoryService, InstantiationType.Delayed);
@@ -187,6 +205,9 @@ registerSingleton(IAIUnifiedStateService, AIUnifiedStateService, InstantiationTy
 registerSingleton(IGitWorkflowService, GitWorkflowService, InstantiationType.Delayed);
 registerSingleton(IRepositoryIntelligenceService, RepositoryIntelligenceService, InstantiationType.Delayed);
 registerSingleton(IAIExecutionService, AIExecutionService, InstantiationType.Delayed);
+
+// ROLLBACK (1) — actual undo/restore operations for execution graph nodes
+registerSingleton(IRollbackEngineService, RollbackEngineService, InstantiationType.Eager);
 
 // VISUALIZATION (2) — render graph/memory as HTML for sidebar webview panels
 registerSingleton(IKnowledgeGraphVisualizationService, KnowledgeGraphVisualizationService, InstantiationType.Delayed);

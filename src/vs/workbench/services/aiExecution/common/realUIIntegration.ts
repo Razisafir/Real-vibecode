@@ -24,7 +24,8 @@ export const IRealUIIntegrationService = createDecorator<IRealUIIntegrationServi
 /**
  * Available color themes.
  * VibeCode2026Dark / VibeCode2026Light map to the brand themes
- * registered in product.json as "Dark 2026" / "Light 2026".
+ * registered in the VS Code theme picker as "VibeCode Dark 2026" / "VibeCode Light 2026"
+ * via the built-in extension at extensions/vibecode-theme-2026/.
  */
 export enum AITheme {
         Dark = 'dark',

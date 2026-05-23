@@ -67,9 +67,9 @@
         ],
         "onboardingThemes": [
                 {
-                        "id": "dark-2026",
-                        "label": "Dark 2026",
-                        "themeId": "Dark 2026",
+                        "id": "vibecode-dark-2026",
+                        "label": "VibeCode Dark 2026",
+                        "themeId": "VibeCode Dark 2026",
                         "type": "dark"
                 },
                 {
@@ -79,9 +79,9 @@
                         "type": "hcDark"
                 },
                 {
-                        "id": "light-2026",
-                        "label": "Light 2026",
-                        "themeId": "Light 2026",
+                        "id": "vibecode-light-2026",
+                        "label": "VibeCode Light 2026",
+                        "themeId": "VibeCode Light 2026",
                         "type": "light"
                 },
                 {

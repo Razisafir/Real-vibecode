@@ -22,6 +22,7 @@ import { URI } from '../../../../base/common/uri.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { IAgentOrchestratorService, AgentLifecycleState, AgentCapability, CapabilityRiskLevel, IAgentCapabilityDeclaration, ApprovalLevel, ApprovalResult, IApprovalRequest, PlanStatus, StepStatus, IExecutionPlan, IPlanStep, IStepAction, IStepResult, IStepCheckpoint, IRetryPolicy, IRollbackStrategy, IAgent, IAgentConstraint, IAgentObservation, AgentObservationType, IAgentLifecycleEvent, IPlanStatusEvent, IStepStatusEvent, IAgentContextSnapshot, IExecutionQuota, ILoopDetectionResult, IWatchdogStatus, IQuotaUsage, IPlanOptions, StepFailureCondition, AgentConstraintType } from '../common/agentOrchestratorService.js';
 import { IAIExecutionService, AIMutationSource, IAIFileEdit } from '../common/aiExecutionService.js';
+import { IRollbackEngineService } from '../common/rollbackEngine.js';
 import { IExecutionGraphService, ExecutionNodeType, ExecutionEdgeType, IExecutionNode } from '../common/executionGraphService.js';
 import { IAIContextService } from '../common/aiContextService.js';
 import { IObservabilityService, TraceCategory, TraceLevel } from '../common/observabilityService.js';
@@ -184,6 +185,7 @@ export class AgentOrchestratorService extends Disposable implements IAgentOrches
                 @IAIContextService private readonly contextService: IAIContextService,
                 @IObservabilityService private readonly observabilityService: IObservabilityService,
                 @IAIUnifiedStateService private readonly stateService: IAIUnifiedStateService,
+                @IRollbackEngineService private readonly rollbackEngine: IRollbackEngineService,
                 @ILogService private readonly logService: ILogService,
         ) {
                 super();
@@ -447,21 +449,10 @@ export class AgentOrchestratorService extends Disposable implements IAgentOrches
 
                 for (const step of completedSteps) {
                         if (step.graphNodeId) {
-                                const node = this.graphService.getNode(step.graphNodeId);
-                                if (node && node.reversible) {
-                                        // Use inverse edit strategy via AIExecutionService
-                                        if (step.rollbackStrategy.type === 'inverse-edit' && step.result) {
-                                                const mutationContext = this.aiExecutionService.createAIContext(
-                                                        `Rollback step: ${step.label}`,
-                                                        plan.rootNodeId
-                                                );
-                                                for (const fileUri of step.result.modifiedFiles) {
-                                                        try {
-                                                                this.aiExecutionService.notifyFileModified(fileUri);
-                                                        } catch { /* best effort */ }
-                                                }
-                                        }
-                                        this.graphService.markRolledBack(step.graphNodeId, plan.rootNodeId ?? planId);
+                                // Delegate to the Rollback Engine for actual content restoration
+                                const result = await this.rollbackEngine.rollbackNode(step.graphNodeId);
+                                if (!result.success) {
+                                        this.logService.warn(`[AgentOrchestrator] Rollback failed for step ${step.label}: ${result.error}`);
                                 }
                         }
                         step.status = StepStatus.RolledBack;

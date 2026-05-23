@@ -657,11 +657,15 @@ export const KNOWN_MODELS: ModelInfo[] = [
 // -- Dynamic Model Discovery Interface --
 
 /**
- * IDynamicModelDiscoveryService -- Runtime model discovery for local providers.
+ * IDynamicModelDiscoveryService -- Runtime model discovery for ALL providers.
  *
- * Queries Ollama's /api/tags and LM Studio's /v1/models endpoints
- * to dynamically discover available models at runtime, rather than
- * relying on hardcoded model lists.
+ * Queries local provider endpoints (Ollama /api/tags, LM Studio /v1/models,
+ * Proxima /v1/models) AND cloud provider APIs (OpenAI /v1/models, Anthropic,
+ * Google Gemini models:list, OpenRouter /v1/models) to dynamically discover
+ * available models at runtime, rather than relying solely on hardcoded model lists.
+ *
+ * Caches results with a 5-minute TTL and emits events when models are
+ * added or removed across providers.
  */
 export const IDynamicModelDiscoveryService = createDecorator<IDynamicModelDiscoveryService>('dynamicModelDiscoveryService');
 
@@ -685,6 +689,30 @@ export interface IDynamicModelDiscoveryService {
         readonly _serviceBrand: undefined;
 
         /**
+         * Event fired when new models are discovered (either from local or cloud providers).
+         * Payload is the list of newly discovered models.
+         */
+        readonly onDidDiscoverModels: Event<DiscoveredModel[]>;
+
+        /**
+         * Event fired when previously known models are removed (e.g. a local model was deleted).
+         * Payload is the list of removed models.
+         */
+        readonly onDidRemoveModels: Event<DiscoveredModel[]>;
+
+        /**
+         * Get all currently known available models across all providers (local + cloud).
+         * Returns cached results if within TTL; triggers a background refresh if stale.
+         */
+        getAvailableModels(): DiscoveredModel[];
+
+        /**
+         * Force a full refresh of all models from all configured providers.
+         * Fires onDidDiscoverModels / onDidRemoveModels as appropriate.
+         */
+        refreshModels(): Promise<void>;
+
+        /**
          * Discover models available on the Ollama daemon.
          * Calls GET /api/tags on the Ollama endpoint.
          * Returns empty array if Ollama is not running.
@@ -706,13 +734,26 @@ export interface IDynamicModelDiscoveryService {
         discoverProximaModels(): Promise<DiscoveredModel[]>;
 
         /**
+         * Discover models available on cloud providers (OpenAI, Anthropic, Google Gemini, OpenRouter).
+         * Queries each provider's model list API when credentials are available.
+         * Returns empty entries for providers without configured API keys.
+         */
+        discoverCloudModels(): Promise<Map<string, DiscoveredModel[]>>;
+
+        /**
          * Discover models for all local providers.
          * Updates the model registry with discovered models.
          */
         discoverAllLocalModels(): Promise<Map<string, DiscoveredModel[]>>;
 
         /**
-         * Check if a local provider endpoint is reachable.
+         * Discover models for ALL providers (local + cloud).
+         * This is the comprehensive discovery method that combines local and cloud results.
+         */
+        discoverAllModels(): Promise<Map<string, DiscoveredModel[]>>;
+
+        /**
+         * Check if a provider endpoint is reachable.
          */
         isEndpointReachable(endpoint: string): Promise<boolean>;
 }
