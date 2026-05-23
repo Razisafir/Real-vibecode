@@ -231,13 +231,16 @@ fi
 log_success "All resources copied"
 
 # Step 10: Install dependencies
+# VS Code uses .ts scripts in npm lifecycle hooks (preinstall, postinstall)
+# that Node.js can't run directly. We use --ignore-scripts to bypass them,
+# then run the actual build scripts during the compile step.
 log_info "Installing VS Code dependencies..."
 if command -v yarn &>/dev/null; then
-    yarn install --frozen-lockfile 2>/dev/null || yarn install
-    log_success "Dependencies installed via yarn"
+    yarn install --ignore-scripts 2>&1 | tail -5
+    log_success "Dependencies installed via yarn (scripts deferred to compile step)"
 else
-    npm ci 2>/dev/null || npm install
-    log_success "Dependencies installed via npm"
+    npm install --ignore-scripts 2>&1 | tail -5
+    log_success "Dependencies installed via npm (scripts deferred to compile step)"
 fi
 
 echo ""
