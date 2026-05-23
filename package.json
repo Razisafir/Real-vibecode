@@ -1,6 +1,6 @@
 {
   "name": "real-vibecode",
-  "version": "1.121.0",
+  "version": "1.121.1",
   "distro": "9897f32f1899b7b2c8e5d0701c5d99458bb8de9e",
   "author": {
     "name": "Real Vibecode Project"
@@ -8,7 +8,6 @@
   "license": "UNLICENSED",
   "description": "AI-native IDE built on VS Code with multi-provider LLM support and autonomous execution",
   "main": "./out/main.js",
-  "type": "module",
   "private": true,
   "repository": {
     "type": "git",

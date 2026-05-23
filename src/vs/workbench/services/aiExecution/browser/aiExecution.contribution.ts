@@ -8,16 +8,16 @@
  *  No fictional absorption. No dead side-effect imports. Every registered
  *  singleton has its constructor dependencies also registered.
  *
- *  REGISTERED SINGLETONS (25):
- *    EXECUTION (5):  AutonomousExecutionLoop, TerminalExecutionBridge, TerminalSessionManager,
- *                     AutonomousExecution, ExecutionSandbox
+ *  REGISTERED SINGLETONS (28):
+ *    EXECUTION (6):  AutonomousExecutionLoop, TerminalExecutionBridge, TerminalSessionManager,
+ *                     AutonomousExecution, ExecutionSandbox, ExecutionGraph
  *    EDITING (2):    TransactionalEdit, CodeEditing
  *    LLM (4):        LLMProvider, ModelRegistry, CredentialStore, ProviderHealth
  *    MEMORY (2):     ProjectMemory, LongHorizonMemory
  *    SAFETY (4):     CostGovernor, ExecutionLock, CommandSafety, ExecutionSanity
  *    REPAIR (2):     RepairIntelligence, AutonomousRepair
- *    INTELLIGENCE (2): StreamingOutput, ExecutionVerification
- *    ORCHESTRATION (2): MultiAgentExecution, ContextWindowOptimization
+ *    INTELLIGENCE (3): StreamingOutput, ExecutionVerification, AIContext
+ *    ORCHESTRATION (3): MultiAgentExecution, ContextWindowOptimization, AgentOrchestrator
  *    UI (1):         RealUIIntegration
  *    STATE (1):      AIUnifiedState
  *
@@ -27,9 +27,6 @@
  *  KNOWN GAPS:
  *    - IObservabilityService: Removed from AIProductContribution (was injected but never used)
  *    - ITokenEstimationService: Removed from AIProductContribution (was injected but never used)
- *    - IAgentOrchestratorService: Has implementation but not registered (not injected by any registered singleton)
- *    - IExecutionGraphService: Has implementation but not registered (not injected by any registered singleton)
- *    - IAIContextService: Has implementation but not registered (not injected by any registered singleton)
  *
  *  PHASE 32 FIXES:
  *    - session.id scoping bug in TerminalExecutionBridgeService FIXED
@@ -112,24 +109,33 @@ import { RepositoryIntelligenceService } from './repositoryIntelligenceService.j
 import { IAIExecutionService } from '../common/aiExecutionService.js';
 import { AIExecutionService } from './aiExecutionService.js';
 
+// ---- AI CORE (3) — were listed as known gaps, now registered ----
+import { IExecutionGraphService } from '../common/executionGraphService.js';
+import { ExecutionGraphService } from './executionGraphService.js';
+import { IAgentOrchestratorService } from '../common/agentOrchestratorService.js';
+import { AgentOrchestratorService } from './agentOrchestratorService.js';
+import { IAIContextService } from '../common/aiContextService.js';
+import { AIContextService } from './aiContextService.js';
+
 // ---- Real UI Product Contribution ----
 import './aiProductContribution.js';
 
 // =====================================================================
 // SINGLETON REGISTRATIONS
-// 25 core singletons + 3 re-registered + 1 auto-registered workbench contribution
+// 28 core singletons + 3 re-registered + 1 auto-registered workbench contribution
 //
 // Every registered singleton's constructor dependencies are also registered.
 // If a service is injected, it must be registered. If a legacy service is
 // injected but doesn't exist, the injection must be removed instead.
 // =====================================================================
 
-// EXECUTION (5)
+// EXECUTION (6)
 registerSingleton(IAutonomousExecutionLoopService, AutonomousExecutionLoopService, InstantiationType.Delayed);
 registerSingleton(ITerminalExecutionBridgeService, TerminalExecutionBridgeService, InstantiationType.Delayed);
 registerSingleton(ITerminalSessionManagerService, TerminalSessionManagerService, InstantiationType.Delayed);
 registerSingleton(IAutonomousExecutionService, AutonomousExecutionService, InstantiationType.Delayed);
 registerSingleton(IExecutionSandboxService, ExecutionSandboxService, InstantiationType.Delayed);
+registerSingleton(IExecutionGraphService, ExecutionGraphService, InstantiationType.Delayed);
 
 // EDITING (2)
 registerSingleton(ITransactionalEditService, TransactionalEditService, InstantiationType.Delayed);
@@ -155,13 +161,15 @@ registerSingleton(IExecutionSanityService, ExecutionSanityService, Instantiation
 registerSingleton(IRepairIntelligenceService, RepairIntelligenceService, InstantiationType.Delayed);
 registerSingleton(IAutonomousRepairService, AutonomousRepairService, InstantiationType.Delayed);
 
-// INTELLIGENCE (2)
+// INTELLIGENCE (3)
 registerSingleton(IStreamingOutputService, StreamingOutputService, InstantiationType.Delayed);
 registerSingleton(IExecutionVerificationService, ExecutionVerificationService, InstantiationType.Delayed);
+registerSingleton(IAIContextService, AIContextService, InstantiationType.Delayed);
 
-// ORCHESTRATION (2)
+// ORCHESTRATION (3)
 registerSingleton(IMultiAgentExecutionService, MultiAgentExecutionService, InstantiationType.Delayed);
 registerSingleton(IContextWindowOptimizationService, ContextWindowOptimizationService, InstantiationType.Delayed);
+registerSingleton(IAgentOrchestratorService, AgentOrchestratorService, InstantiationType.Delayed);
 
 // UI (1)
 registerSingleton(IRealUIIntegrationService, RealUIIntegrationService, InstantiationType.Delayed);
