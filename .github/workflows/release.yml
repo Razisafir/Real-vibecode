@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "VS Code version to build from (e.g. 1.121.1)"
+        description: "VS Code version to build from (e.g. 1.121.0)"
         required: false
-        default: "1.121.1"
+        default: "1.121.0"
       platform:
         description: "Platform to build (win / mac / linux / all)"
         required: false
@@ -24,7 +24,7 @@ permissions:
 
 env:
   NODE_OPTIONS: "--max-old-space-size=8192"
-  VSCODE_VERSION: ${{ github.event.inputs.version || '1.121.1' }}
+  VSCODE_VERSION: ${{ github.event.inputs.version || '1.121.0' }}
 
 jobs:
   # ─── Windows ────────────────────────────────────────────────────────────────
