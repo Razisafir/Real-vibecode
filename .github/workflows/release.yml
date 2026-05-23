@@ -76,14 +76,15 @@ jobs:
         shell: bash
         working-directory: .
 
-      - name: Compile VS Code source
-        run: |
-          cd vscode-source
-          echo "Running postinstall scripts (downloads Electron, etc.)..."
-          yarn postinstall 2>&1 | tail -20 || true
-          echo "Compiling VS Code..."
-          yarn compile 2>&1 | tail -30
+      - name: Install VS Code dependencies
+        run: yarn install --network-timeout 600000
         shell: bash
+        working-directory: vscode-source
+
+      - name: Compile VS Code source
+        run: yarn compile 2>&1 | tail -30
+        shell: bash
+        working-directory: vscode-source
 
       - name: Copy compiled output
         run: |
@@ -175,14 +176,15 @@ jobs:
         run: yarn install --ignore-scripts
         shell: bash
 
-      - name: Compile VS Code source
-        run: |
-          cd vscode-source
-          echo "Running postinstall scripts (downloads Electron, etc.)..."
-          yarn postinstall 2>&1 | tail -20 || true
-          echo "Compiling VS Code..."
-          yarn compile 2>&1 | tail -30
+      - name: Install VS Code dependencies
+        run: yarn install --network-timeout 600000
         shell: bash
+        working-directory: vscode-source
+
+      - name: Compile VS Code source
+        run: yarn compile 2>&1 | tail -30
+        shell: bash
+        working-directory: vscode-source
 
       - name: Copy compiled output
         run: |
@@ -283,14 +285,15 @@ jobs:
         run: yarn install --ignore-scripts
         shell: bash
 
-      - name: Compile VS Code source
-        run: |
-          cd vscode-source
-          echo "Running postinstall scripts (downloads Electron, etc.)..."
-          yarn postinstall 2>&1 | tail -20 || true
-          echo "Compiling VS Code..."
-          yarn compile 2>&1 | tail -30
+      - name: Install VS Code dependencies
+        run: yarn install --network-timeout 600000
         shell: bash
+        working-directory: vscode-source
+
+      - name: Compile VS Code source
+        run: yarn compile 2>&1 | tail -30
+        shell: bash
+        working-directory: vscode-source
 
       - name: Copy compiled output
         run: |

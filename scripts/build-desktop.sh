@@ -307,9 +307,9 @@ compile_source() {
     if command -v yarn &>/dev/null; then
         log_info "Compiling with yarn..."
         
-        # Step 1: Run postinstall scripts (download Electron, etc.)
-        log_info "Running postinstall scripts..."
-        yarn postinstall 2>&1 | tail -10 || true
+        # Step 1: Ensure dependencies are fully installed (including lifecycle scripts)
+        log_info "Installing dependencies with yarn..."
+        yarn install --network-timeout 600000 2>&1 | tail -10
         
         # Step 2: Compile the core
         log_info "Running yarn compile..."
@@ -319,7 +319,7 @@ compile_source() {
             yarn compile 2>&1 | tail -20
         fi
         
-        # Step 2: Build the electron app
+        # Step 3: Build the electron app
         log_info "Running yarn electron..."
         yarn electron 2>&1 | tail -5 || true
     else
