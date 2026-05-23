@@ -101,6 +101,9 @@ import { ILLMStreamingService, LLMRequest, LLMMessage, KNOWN_PROVIDER_CONFIGS } 
 // Execution graph for Knowledge Graph data source
 import { IExecutionGraphService, IExecutionNode, IExecutionEdge, IExecutionScope, ExecutionNodeType } from '../common/executionGraphService.js';
 
+// Playwright Browser Automation service
+import { IPlaywrightBrowserService } from './playwrightBrowserService.js';
+
 // =====================================================================================
 // CONSTANTS
 // =====================================================================================
@@ -2804,3 +2807,101 @@ registerWorkbenchContribution2(
 
 // Also add a static ID for the contribution
 (AIProductContribution as any).ID = 'aiExecution.productContribution';
+
+// =====================================================================================
+// BROWSE URL COMMAND -- Open a URL in the Playwright browser and return summary
+// Triggered by Ctrl/Cmd+Shift+U (opens QuickInput for URL entry)
+// =====================================================================================
+
+CommandsRegistry.registerCommand('aiExecution.browseUrl', {
+        handler: async (accessor: any, url?: string) => {
+                const quickInputService = accessor.get(IQuickInputService) as IQuickInputService;
+                const playwrightBrowserService = accessor.get(IPlaywrightBrowserService) as IPlaywrightBrowserService;
+                const logService = accessor.get(ILogService) as ILogService;
+
+                // If no URL provided as argument, prompt for one
+                let targetUrl = url;
+                if (!targetUrl) {
+                        targetUrl = await new Promise<string | undefined>((resolve) => {
+                                const input = quickInputService.createInputBox();
+                                input.title = 'AI: Browse URL';
+                                input.placeholder = 'Enter a URL to browse (e.g., https://docs.example.com)';
+                                input.prompt = 'The Playwright browser will navigate to this URL and return a page summary';
+                                input.onDidAccept(() => {
+                                        resolve(input.value);
+                                        input.dispose();
+                                });
+                                input.onDidHide(() => {
+                                        resolve(undefined);
+                                        input.dispose();
+                                });
+                                input.show();
+                        });
+                }
+
+                if (!targetUrl) {
+                        logService.info('[AIProduct] browseUrl cancelled — no URL provided');
+                        return;
+                }
+
+                // Ensure URL has a protocol
+                if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                        targetUrl = 'https://' + targetUrl;
+                }
+
+                logService.info(`[AIProduct] browseUrl: Navigating to ${targetUrl} (mode: ${playwrightBrowserService.getCurrentMode()})`);
+
+                try {
+                        const result = await playwrightBrowserService.browseTo(targetUrl, {
+                                takeScreenshot: true,
+                                timeout: 30_000,
+                        });
+
+                        if (result.success && result.page) {
+                                const summary = [
+                                        `**URL:** ${result.page.url}`,
+                                        `**Title:** ${result.page.title}`,
+                                        `**Mode:** ${result.page.mode}`,
+                                        `**Latency:** ${result.latencyMs}ms`,
+                                        '',
+                                        result.page.textContent.slice(0, 2000) + (result.page.textContent.length > 2000 ? '...' : ''),
+                                ].join('\n');
+
+                                logService.info(`[AIProduct] browseUrl: Successfully loaded "${result.page.title}" (${result.latencyMs}ms, ${result.page.mode})`);
+
+                                return {
+                                        success: true,
+                                        url: result.page.url,
+                                        title: result.page.title,
+                                        summary,
+                                        screenshot: result.page.screenshot,
+                                        mode: result.page.mode,
+                                        latencyMs: result.latencyMs,
+                                };
+                        } else {
+                                logService.warn(`[AIProduct] browseUrl: Failed to load ${targetUrl} — ${result.error}`);
+                                return {
+                                        success: false,
+                                        error: result.error,
+                                        mode: result.mode,
+                                };
+                        }
+                } catch (error: any) {
+                        logService.error(`[AIProduct] browseUrl: Error — ${error?.message || String(error)}`);
+                        return {
+                                success: false,
+                                error: error?.message || String(error),
+                        };
+                }
+        },
+        description: 'Browse a URL using the Playwright browser and return a screenshot/summary',
+});
+
+// Keybinding: Ctrl/Cmd+Shift+U → Browse URL
+KeybindingsRegistry.registerKeybinding({
+        keybinding: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyU,
+        command: 'aiExecution.browseUrl',
+        when: undefined,
+        weight: 0,
+        extensionId: undefined,
+});

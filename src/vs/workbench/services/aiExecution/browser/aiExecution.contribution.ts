@@ -132,6 +132,10 @@ import { ProviderHealthDashboardService } from './providerHealthDashboard.js';
 import { ICostGovernorDashboardService } from './costGovernorDashboard.js';
 import { CostGovernorDashboardService } from './costGovernorDashboard.js';
 
+// ---- BROWSER AUTOMATION (1) — Playwright + fetch fallback for web research ----
+import { IPlaywrightBrowserService } from './playwrightBrowserService.js';
+import { PlaywrightBrowserService } from './playwrightBrowserService.js';
+
 // ---- Real UI Product Contribution ----
 import './aiProductContribution.js';
 
@@ -223,3 +227,6 @@ registerSingleton(IKnowledgeGraphVisualizationService, KnowledgeGraphVisualizati
 registerSingleton(IMemoryVisualizationService, MemoryVisualizationService, InstantiationType.Delayed);
 registerSingleton(IProviderHealthDashboardService, ProviderHealthDashboardService, InstantiationType.Delayed);
 registerSingleton(ICostGovernorDashboardService, CostGovernorDashboardService, InstantiationType.Delayed);
+
+// BROWSER AUTOMATION (1) — Playwright + fetch fallback for web research and URL browsing
+registerSingleton(IPlaywrightBrowserService, PlaywrightBrowserService, InstantiationType.Eager);
