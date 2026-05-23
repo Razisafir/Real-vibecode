@@ -72,6 +72,28 @@ import { ExecutionEvent } from '../common/executionEvents.js';
 // Webview HTML content
 import { getAIWorkflowHTML } from './aiWorkflowContent.js';
 
+// Visualization service imports
+import { IKnowledgeGraphVisualizationService } from './knowledgeGraphVisualizationService.js';
+import { IMemoryVisualizationService, MemoryEntry, TokenBudget, CompactionStatus } from './memoryVisualizationService.js';
+
+// Command registration
+import { CommandsRegistry, ICommandService } from '../../../../platform/commands/common/commands.js';
+
+// Keybinding registration
+import { KeybindingsRegistry, IKeybindingItem } from '../../../../platform/keybinding/common/keybindingsRegistry.js';
+import { KeyMod, KeyCode } from '../../../../base/common/keyCodes.js';
+import { OS } from '../../../../base/common/platform.js';
+import { ContextKeyExpr } from '../../../../platform/contextkey/common/contextkey.js';
+
+// QuickInput for API key configuration
+import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
+
+// LLM Streaming service for Jarvis chat
+import { ILLMStreamingService, LLMRequest, LLMMessage, KNOWN_PROVIDER_CONFIGS } from '../common/llmProvider.js';
+
+// Execution graph for Knowledge Graph data source
+import { IExecutionGraphService } from '../common/executionGraphService.js';
+
 // =====================================================================================
 // CONSTANTS
 // =====================================================================================
@@ -80,6 +102,9 @@ const AI_VIEW_CONTAINER_ID = 'aiExecution';
 const AI_WORKFLOW_VIEW_ID = 'aiExecution.workflow';
 const AI_PROJECTS_VIEW_ID = 'aiExecution.projects';
 const AI_TIMELINE_VIEW_ID = 'aiExecution.timeline';
+const AI_KNOWLEDGE_GRAPH_VIEW_ID = 'aiExecution.knowledgeGraph';
+const AI_MEMORY_VIEW_ID = 'aiExecution.memory';
+const AI_JARVIS_VIEW_ID = 'aiExecution.jarvis';
 
 const STORAGE_KEY_PROJECT = 'aiExecution.currentProject';
 const STORAGE_KEY_STEP = 'aiExecution.currentStep';
@@ -107,6 +132,24 @@ const aiTimelineIcon = registerIcon(
         'ai-timeline-icon',
         Codicon.history,
         'AI Timeline view icon'
+);
+
+const aiKnowledgeGraphIcon = registerIcon(
+        'ai-knowledge-graph-icon',
+        Codicon.graph,
+        'AI Knowledge Graph view icon'
+);
+
+const aiMemoryIcon = registerIcon(
+        'ai-memory-icon',
+        Codicon.database,
+        'AI Memory view icon'
+);
+
+const aiJarvisIcon = registerIcon(
+        'ai-jarvis-icon',
+        Codicon.commentDiscussion,
+        'AI Jarvis chat view icon'
 );
 
 // =====================================================================================
@@ -168,6 +211,39 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([
                         }
                 ),
         },
+        {
+                id: AI_KNOWLEDGE_GRAPH_VIEW_ID,
+                name: { value: 'Knowledge Graph', original: 'Knowledge Graph' },
+                containerIcon: aiKnowledgeGraphIcon,
+                canToggleVisibility: true,
+                ctorDescriptor: new SyncDescriptor(
+                        class AIKnowledgeGraphViewPane {
+                                constructor() { /* resolved by webviewViewService */ }
+                        }
+                ),
+        },
+        {
+                id: AI_MEMORY_VIEW_ID,
+                name: { value: 'Memory', original: 'Memory' },
+                containerIcon: aiMemoryIcon,
+                canToggleVisibility: true,
+                ctorDescriptor: new SyncDescriptor(
+                        class AIMemoryViewPane {
+                                constructor() { /* resolved by webviewViewService */ }
+                        }
+                ),
+        },
+        {
+                id: AI_JARVIS_VIEW_ID,
+                name: { value: 'Jarvis Chat', original: 'Jarvis Chat' },
+                containerIcon: aiJarvisIcon,
+                canToggleVisibility: true,
+                ctorDescriptor: new SyncDescriptor(
+                        class AIJarvisViewPane {
+                                constructor() { /* resolved by webviewViewService */ }
+                        }
+                ),
+        },
 ], aiViewContainer);
 
 // =====================================================================================
@@ -181,9 +257,9 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
         properties: {
                 'aiExecution.theme': {
                         type: 'string',
-                        enum: ['dark', 'deepblue', 'light'],
-                        default: 'dark',
-                        description: 'Color theme for AI Execution panels',
+                        enum: ['dark', 'deepblue', 'light', 'highcontrast', 'vibecode-2026-dark', 'vibecode-2026-light'],
+                        default: 'vibecode-2026-dark',
+                        description: 'Color theme for AI Execution panels. VibeCode 2026 themes use the official brand palette.',
                         scope: ConfigurationScope.APPLICATION,
                 },
                 'aiExecution.executionMode': {
@@ -461,6 +537,37 @@ registerThemingParticipant((theme, collector) => {
         if (info) {
                 collector.addRule(`.ai-status-info { color: ${info}; }`);
         }
+
+        // Emit VibeCode brand tokens via the theming participant so they
+        // re-sync automatically when VS Code's active theme changes.
+        const themeType = theme.type;
+        const isDark = themeType === 'dark' || themeType === 'hcDark' || themeType === 'vs-dark';
+        const brandPrimary = isDark ? '#8B5CF6' : '#7C3AED';
+        const brandSecondary = isDark ? '#06B6D4' : '#0891B2';
+        const brandBgStart = isDark ? '#1E1B4B' : '#FFFFFF';
+        const brandBgEnd = isDark ? '#09090B' : '#F4F4F5';
+        const brandSurface = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+        const brandText = isDark ? '#FAFAFA' : '#09090B';
+        const brandMuted = isDark ? '#A1A1AA' : '#71717A';
+        const brandBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.10)';
+
+        collector.addRule(`:root {
+                --vibecode-primary: ${brandPrimary};
+                --vibecode-secondary: ${brandSecondary};
+                --vibecode-bg-gradient-start: ${brandBgStart};
+                --vibecode-bg-gradient-end: ${brandBgEnd};
+                --vibecode-surface: ${brandSurface};
+                --vibecode-text: ${brandText};
+                --vibecode-muted: ${brandMuted};
+                --vibecode-border: ${brandBorder};
+                --vibecode-border-focus: ${brandPrimary};
+        }`);
+
+        // Toggle body class for gradient overrides
+        if (typeof document !== 'undefined') {
+                document.body.classList.toggle('vibecode-dark-first', isDark);
+                document.body.classList.toggle('vibecode-light-first', !isDark);
+        }
 });
 
 // =====================================================================================
@@ -552,6 +659,12 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
         /** Reference to the active workflow webview for posting messages from service events */
         private _activeWebview: { postMessage(msg: any): Thenable<boolean> } | null = null;
 
+        /** Reference to the active Jarvis chat webview for posting LLM responses */
+        private _jarvisWebview: { postMessage(msg: any): Thenable<boolean> } | null = null;
+
+        /** Conversation history for Jarvis chat context */
+        private _jarvisConversationHistory: LLMMessage[] = [];
+
         /** Cached plan data for execution */
         private _cachedPlan: any | null = null;
 
@@ -578,10 +691,17 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                 // Phase 28 services
                 @IAutonomousExecutionLoopService private readonly executionLoopService: IAutonomousExecutionLoopService,
                 @ITerminalExecutionBridgeService private readonly terminalBridgeService: ITerminalExecutionBridgeService,
+                // Visualization services
+                @IKnowledgeGraphVisualizationService private readonly knowledgeGraphVisualizationService: IKnowledgeGraphVisualizationService,
+                @IMemoryVisualizationService private readonly memoryVisualizationService: IMemoryVisualizationService,
+                // Execution graph for Knowledge Graph data
+                @IExecutionGraphService private readonly executionGraphService: IExecutionGraphService,
+                // QuickInput for API key configuration UI
+                @IQuickInputService private readonly quickInputService: IQuickInputService,
         ) {
                 super();
 
-                this.logService.info('[AIProduct] Initializing real UI wiring with Phase 31 DI fixes');
+                this.logService.info('[AIProduct] Initializing real UI wiring with Phase 34 keybindings, Jarvis LLM wiring, and API key config');
 
                 // 1. Inject CSS design tokens into the DOM immediately
                 this.injectCSS();
@@ -604,7 +724,10 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                 // 7. Wire Phase 28 service events to the webview
                 this.wirePhase28ServiceEvents();
 
-                this.logService.info('[AIProduct] UI wiring complete. Views registered, CSS injected, webview resolvers active, Phase 25 services wired.');
+                // 8. Register keybindings for AI actions
+                this.registerKeybindings();
+
+                this.logService.info('[AIProduct] UI wiring complete. Views registered, CSS injected, webview resolvers active, keybindings registered.');
         }
 
         private injectCSS(): void {
@@ -670,6 +793,325 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                                 webviewView.webview.html = this.getTimelineHTML();
                         },
                 });
+
+                // ─── Knowledge Graph webview resolver ──────────────────────────────────
+                this.webviewViewService.register(AI_KNOWLEDGE_GRAPH_VIEW_ID, {
+                        resolve: async (webviewView: WebviewView, token: CancellationToken) => {
+                                webviewView.webview.options = {
+                                        enableScripts: true,
+                                        localResourceRoots: [],
+                                };
+
+                                // Fetch live graph data from ExecutionGraphService and render
+                                const nodes = this.executionService.getRecentNodes?.(1000) ?? [];
+                                const edges: any[] = [];
+                                const scopes: any[] = [];
+                                webviewView.webview.html = this.knowledgeGraphVisualizationService.renderGraph(nodes, edges, scopes);
+
+                                // Handle postMessage from the knowledge graph webview
+                                webviewView.webview.onDidReceiveMessage((msg: { type: string; nodeId?: string; [key: string]: any }) => {
+                                        if (msg.type === 'nodeSelected' && msg.nodeId) {
+                                                this.knowledgeGraphVisualizationService.handleWebviewMessage(msg);
+                                                this.logService.info(`[AIProduct] Knowledge graph node selected: ${msg.nodeId}`);
+                                        } else if (msg.type === 'refreshGraph') {
+                                                // Re-render with fresh data
+                                                const freshNodes = this.executionService.getRecentNodes?.(1000) ?? [];
+                                                webviewView.webview.html = this.knowledgeGraphVisualizationService.renderGraph(freshNodes, [], []);
+                                        }
+                                });
+
+                                // Auto-refresh graph when execution state changes
+                                if (this.executionService.onDidExecutionChange) {
+                                        this._register(this.executionService.onDidExecutionChange(() => {
+                                                const freshNodes = this.executionService.getRecentNodes?.(1000) ?? [];
+                                                const freshHTML = this.knowledgeGraphVisualizationService.renderGraph(freshNodes, [], []);
+                                                webviewView.webview.html = freshHTML;
+                                        }));
+                                }
+
+                                this.logService.info('[AIProduct] Knowledge Graph webview resolved and ready');
+                        },
+                });
+
+                // ─── Memory Visualization webview resolver ──────────────────────────────
+                this.webviewViewService.register(AI_MEMORY_VIEW_ID, {
+                        resolve: async (webviewView: WebviewView, token: CancellationToken) => {
+                                webviewView.webview.options = {
+                                        enableScripts: true,
+                                        localResourceRoots: [],
+                                };
+
+                                webviewView.webview.html = this.getMemoryVisualizationHTML();
+
+                                // Handle postMessage from the memory webview
+                                webviewView.webview.onDidReceiveMessage((msg: { type: string; entryId?: string; [key: string]: any }) => {
+                                        if (msg.type === 'memorySelected' && msg.entryId) {
+                                                this.logService.info(`[AIProduct] Memory entry selected: ${msg.entryId}`);
+                                        } else if (msg.type === 'refreshMemory') {
+                                                webviewView.webview.html = this.getMemoryVisualizationHTML();
+                                        }
+                                });
+
+                                this.logService.info('[AIProduct] Memory Visualization webview resolved and ready');
+                        },
+                });
+
+                // ─── Jarvis Chat webview resolver ───────────────────────────────────────
+                this.webviewViewService.register(AI_JARVIS_VIEW_ID, {
+                        resolve: async (webviewView: WebviewView, token: CancellationToken) => {
+                                webviewView.webview.options = {
+                                        enableScripts: true,
+                                        localResourceRoots: [],
+                                };
+
+                                webviewView.webview.html = this.getJarvisHTML();
+
+                                // Store reference to Jarvis webview for LLM response posting
+                                this._jarvisWebview = webviewView.webview;
+
+                                // Handle Jarvis chat messages — wired to LLMProviderService
+                                webviewView.webview.onDidReceiveMessage(async (msg: { type: string; text?: string; [key: string]: any }) => {
+                                        if (msg.type === 'chatMessage' && msg.text) {
+                                                await this.handleJarvisChatMessage(msg.text);
+                                        } else if (msg.type === 'configureApiKeys') {
+                                                CommandsRegistry.getCommand('aiExecution.configureApiKeys')?.handler();
+                                        } else if (msg.type === 'clearHistory') {
+                                                this._jarvisConversationHistory = [];
+                                                webviewView.webview.postMessage({ type: 'historyCleared', timestamp: Date.now() });
+                                        }
+                                });
+
+                                this.logService.info('[AIProduct] Jarvis Chat webview resolved and ready with LLM wiring');
+                        },
+                });
+        }
+
+        // =================================================================================
+        // KEYBINDING REGISTRATION
+        // Registers keyboard shortcuts for all AI Execution actions.
+        // Uses KeyMod.CtrlCmd for cross-platform Ctrl/Cmd support.
+        // =================================================================================
+
+        private registerKeybindings(): void {
+                // ─── View Focus Keybindings ──────────────────────────────────────────
+                // Ctrl/Cmd+Shift+J → Show Jarvis Chat
+                KeybindingsRegistry.registerKeybinding({
+                        keybinding: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyJ,
+                        command: 'aiExecution.showJarvis',
+                        when: undefined,
+                        weight: 0, // EditorCore.Weight.editorContrib - use 0 for default
+                        extensionId: undefined,
+                });
+
+                // Ctrl/Cmd+Shift+K → Show Knowledge Graph
+                KeybindingsRegistry.registerKeybinding({
+                        keybinding: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyK,
+                        command: 'aiExecution.showKnowledgeGraph',
+                        when: undefined,
+                        weight: 0,
+                        extensionId: undefined,
+                });
+
+                // Ctrl/Cmd+Shift+M → Show Memory
+                KeybindingsRegistry.registerKeybinding({
+                        keybinding: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyM,
+                        command: 'aiExecution.showMemory',
+                        when: undefined,
+                        weight: 0,
+                        extensionId: undefined,
+                });
+
+                // Ctrl/Cmd+Shift+A → Show AI Workflow
+                KeybindingsRegistry.registerKeybinding({
+                        keybinding: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyA,
+                        command: 'aiExecution.showWorkflow',
+                        when: undefined,
+                        weight: 0,
+                        extensionId: undefined,
+                });
+
+                // ─── AI Action Keybindings ──────────────────────────────────────────
+                // Ctrl/Cmd+Shift+Space → Trigger AI inline completion
+                KeybindingsRegistry.registerKeybinding({
+                        keybinding: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Space,
+                        command: 'aiExecution.triggerInlineCompletion',
+                        when: undefined,
+                        weight: 0,
+                        extensionId: undefined,
+                });
+
+                // Ctrl/Cmd+Shift+Enter → Execute current AI plan
+                KeybindingsRegistry.registerKeybinding({
+                        keybinding: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter,
+                        command: 'aiExecution.executePlan',
+                        when: undefined,
+                        weight: 0,
+                        extensionId: undefined,
+                });
+
+                // Ctrl/Cmd+Shift+R → Rollback last AI change
+                KeybindingsRegistry.registerKeybinding({
+                        keybinding: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyR,
+                        command: 'aiExecution.rollbackChange',
+                        when: undefined,
+                        weight: 0,
+                        extensionId: undefined,
+                });
+
+                // Ctrl/Cmd+Shift+E → Toggle autonomous execution
+                KeybindingsRegistry.registerKeybinding({
+                        keybinding: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyE,
+                        command: 'aiExecution.toggleAutonomous',
+                        when: undefined,
+                        weight: 0,
+                        extensionId: undefined,
+                });
+
+                this.logService.info('[AIProduct] Keybindings registered: Ctrl+Shift+J/K/M/A for views, Ctrl+Shift+Space/Enter/R/E for AI actions');
+        }
+
+        // =================================================================================
+        // JARVIS CHAT → LLM PROVIDER WIRING
+        // Handles chat messages by calling ILLMProviderService for real AI responses.
+        // Falls back to streaming via ILLMStreamingService when available.
+        // =================================================================================
+
+        private async handleJarvisChatMessage(text: string): Promise<void> {
+                this.logService.info(`[AIProduct] Jarvis chat message received: ${text.substring(0, 100)}`);
+
+                // Add user message to conversation history
+                this._jarvisConversationHistory.push({ role: 'user', content: text });
+
+                // Keep conversation history to a reasonable window (last 20 messages)
+                if (this._jarvisConversationHistory.length > 20) {
+                        this._jarvisConversationHistory = this._jarvisConversationHistory.slice(-20);
+                }
+
+                try {
+                        // Check if API key is configured for the active provider
+                        const activeProviderId = this.llmProviderService.activeProviderId;
+                        const hasKey = await this.credentialStoreService.hasKey(activeProviderId);
+
+                        if (!hasKey) {
+                                // No API key configured — prompt user
+                                this._jarvisWebview?.postMessage({
+                                        type: 'chatResponse',
+                                        text: `No API key configured for provider "${activeProviderId}". Click the gear button or run "AI: Configure API Keys" from the command palette to set up your key.`,
+                                        timestamp: Date.now(),
+                                        model: activeProviderId,
+                                        isError: true,
+                                });
+                                return;
+                        }
+
+                        // Build the LLM request with system prompt and conversation history
+                        const systemMessage: LLMMessage = {
+                                role: 'system',
+                                content: 'You are Jarvis, an AI coding assistant integrated into the VibeCode editor. You help users with coding tasks, explain code, suggest improvements, and assist with the AI Execution workflow. Be concise, helpful, and accurate. When suggesting code, use markdown code blocks with the appropriate language tag.',
+                        };
+
+                        const provider = this.llmProviderService.getProvider(activeProviderId);
+                        const model = provider?.defaultModel || 'gpt-4o';
+
+                        const request: LLMRequest = {
+                                model,
+                                messages: [systemMessage, ...this._jarvisConversationHistory],
+                                maxTokens: 2048,
+                                temperature: 0.7,
+                                requestId: `jarvis-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+                        };
+
+                        // Send typing indicator while waiting
+                        this._jarvisWebview?.postMessage({ type: 'typingStart' });
+
+                        // Try to use streaming for real-time token delivery
+                        let responseText = '';
+                        let usedStreaming = false;
+
+                        try {
+                                // Attempt streaming via ILLMStreamingService if available
+                                const streamingService = (this as any)._llmStreamingService as ILLMStreamingService | undefined;
+                                if (streamingService && provider?.supportsStreaming) {
+                                        usedStreaming = true;
+                                        let accumulatedText = '';
+
+                                        for await (const chunk of streamingService.streamRequest(request)) {
+                                                if (chunk.type === 'token' && chunk.content) {
+                                                        accumulatedText += chunk.content;
+                                                        // Stream each token to the webview for real-time display
+                                                        this._jarvisWebview?.postMessage({
+                                                                type: 'chatStreamToken',
+                                                                token: chunk.content,
+                                                                timestamp: Date.now(),
+                                                        });
+                                                }
+                                                if (chunk.type === 'done') {
+                                                        responseText = accumulatedText;
+                                                }
+                                                if (chunk.type === 'error' && chunk.error) {
+                                                        throw new Error(chunk.error);
+                                                }
+                                        }
+                                }
+                        } catch (streamError) {
+                                // Streaming failed or unavailable, fall back to regular completion
+                                this.logService.info(`[AIProduct] Streaming unavailable, falling back to regular completion: ${streamError}`);
+                                usedStreaming = false;
+                        }
+
+                        if (!usedStreaming) {
+                                // Regular (non-streaming) completion
+                                const response = await this.llmProviderService.sendRequest(request);
+                                responseText = response.content;
+                        }
+
+                        // Add assistant response to conversation history
+                        this._jarvisConversationHistory.push({ role: 'assistant', content: responseText });
+
+                        // Send final response to webview
+                        this._jarvisWebview?.postMessage({
+                                type: 'chatResponse',
+                                text: responseText,
+                                timestamp: Date.now(),
+                                model: `${provider?.displayName || activeProviderId}/${model}`,
+                                usedStreaming,
+                        });
+
+                        // Record success in health tracking
+                        this.providerHealthService.recordSuccess(activeProviderId, Date.now() - parseInt(request.requestId.split('-')[1] || '0'));
+
+                        this.logService.info(`[AIProduct] Jarvis LLM response received (${responseText.length} chars, streaming: ${usedStreaming})`);
+
+                } catch (error: any) {
+                        // Handle errors gracefully
+                        const errorMessage = error?.message || String(error);
+                        this.logService.error(`[AIProduct] Jarvis LLM error: ${errorMessage}`);
+
+                        // Check for common error types
+                        let userMessage: string;
+                        if (errorMessage.includes('401') || errorMessage.includes('auth') || errorMessage.includes('API key')) {
+                                userMessage = `Authentication failed. Your API key for "${this.llmProviderService.activeProviderId}" may be invalid or expired. Run "AI: Configure API Keys" to update it.`;
+                        } else if (errorMessage.includes('429') || errorMessage.includes('rate')) {
+                                userMessage = 'Rate limit exceeded. Please wait a moment and try again.';
+                        } else if (errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT')) {
+                                userMessage = 'Request timed out. The provider may be experiencing high load. Try again in a moment.';
+                        } else if (errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('fetch')) {
+                                userMessage = 'Network error. Could not reach the AI provider. Check your internet connection and try again.';
+                        } else {
+                                userMessage = `Error: ${errorMessage}. Try again or switch providers via "AI: Configure API Keys".`;
+                        }
+
+                        this._jarvisWebview?.postMessage({
+                                type: 'chatResponse',
+                                text: userMessage,
+                                timestamp: Date.now(),
+                                model: this.llmProviderService.activeProviderId,
+                                isError: true,
+                        });
+
+                        // Record failure in health tracking
+                        this.providerHealthService.recordFailure(this.llmProviderService.activeProviderId, errorMessage);
+                }
         }
 
         // =================================================================================
@@ -1491,7 +1933,448 @@ body { font-family: var(--vscode-font-family); margin: 0; padding: 0; background
 body { font-family: var(--vscode-font-family); margin: 0; padding: 8px; background: var(--vscode-sideBar-background); color: var(--vscode-foreground); }
 </style></head><body>${timeline}</body></html>`;
         }
+
+        // =================================================================================
+        // MEMORY VISUALIZATION HTML
+        // Calls the MemoryVisualizationService to produce a complete self-contained
+        // HTML document with budget gauge, timeline, and filterable entry cards.
+        // =================================================================================
+
+        private getMemoryVisualizationHTML(): string {
+                // Build sample data from the real project memory service
+                const memoryData = this.realUIIntegrationService.getMemoryDashboardData();
+                const entries: MemoryEntry[] = memoryData.entryTypes.map((et: { type: string; count: number }, i: number) => ({
+                        id: `mem-${i}`,
+                        type: et.type,
+                        content: `${et.count} ${et.type} entries in project memory`,
+                        priority: (i === 0 ? 'high' : i < 3 ? 'medium' : 'low') as MemoryEntry['priority'],
+                        tags: [et.type, 'project'],
+                        tokenCount: et.count * 150,
+                        createdAt: Date.now() - (i * 3600000),
+                        updatedAt: Date.now(),
+                        relevanceScore: Math.max(0, 1 - i * 0.15),
+                }));
+
+                const budget: TokenBudget = {
+                        used: memoryData.totalTokens,
+                        total: 50000,
+                        percentage: memoryData.totalTokens > 0 ? (memoryData.totalTokens / 50000) * 100 : 0,
+                };
+
+                return this.memoryVisualizationService.renderMemoryOverview(entries, budget);
+        }
+
+        // =================================================================================
+        // JARVIS CHAT HTML
+        // Self-contained HTML for the Jarvis AI chat interface.
+        // Communicates with the host via postMessage for bidirectional chat.
+        // =================================================================================
+
+        private getJarvisHTML(): string {
+                return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jarvis Chat</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: var(--vscode-editor-background, #1e1e2e);
+  --fg: var(--vscode-editor-foreground, #cccccc);
+  --surface: var(--vscode-editorWidget-background, #252526);
+  --border: var(--vscode-panel-border, #474747);
+  --accent: var(--vscode-button-background, #6c8cff);
+  --accent-fg: var(--vscode-button-foreground, #ffffff);
+  --input-bg: var(--vscode-input-background, #3c3c3c);
+  --input-fg: var(--vscode-input-foreground, #cccccc);
+  --input-border: var(--vscode-input-border, #3c3c3c);
+  --focus-border: var(--vscode-focusBorder, #6c8cff);
+  --muted: var(--vscode-descriptionForeground, #8b8b8b);
+  --font: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  --font-mono: var(--vscode-editor-font-family, 'Cascadia Code', 'Fira Code', Consolas, monospace);
 }
+body {
+  font-family: var(--font); font-size: 13px; color: var(--fg);
+  background: var(--bg); height: 100vh; display: flex; flex-direction: column;
+}
+.header {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.header-icon { color: var(--accent); font-size: 18px; }
+.header-title { font-weight: 600; font-size: 14px; }
+.header-subtitle { font-size: 11px; color: var(--muted); margin-left: auto; }
+.messages {
+  flex: 1; overflow-y: auto; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.msg { display: flex; gap: 10px; max-width: 95%; }
+.msg.user { align-self: flex-end; flex-direction: row-reverse; }
+.msg-avatar {
+  width: 28px; height: 28px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; flex-shrink: 0;
+  font-size: 12px; font-weight: 700;
+}
+.msg.assistant .msg-avatar { background: rgba(108,140,255,0.2); color: var(--accent); }
+.msg.user .msg-avatar { background: rgba(74,222,128,0.2); color: #4ade80; }
+.msg-bubble {
+  padding: 8px 12px; border-radius: 10px; font-size: 13px;
+  line-height: 1.5; word-break: break-word;
+}
+.msg.assistant .msg-bubble { background: var(--surface); border: 1px solid var(--border); }
+.msg.user .msg-bubble { background: rgba(108,140,255,0.15); border: 1px solid rgba(108,140,255,0.2); }
+.msg-time { font-size: 10px; color: var(--muted); margin-top: 4px; }
+.typing-indicator {
+  display: flex; gap: 4px; padding: 8px 12px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px; width: fit-content;
+}
+.typing-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--muted);
+  animation: typingBounce 1.4s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+.input-area {
+  padding: 10px 14px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; flex-shrink: 0;
+}
+.chat-input {
+  flex: 1; padding: 8px 12px; background: var(--input-bg);
+  border: 1px solid var(--input-border); border-radius: 6px;
+  color: var(--input-fg); font-family: var(--font); font-size: 13px;
+  outline: none; resize: none; min-height: 36px; max-height: 120px;
+}
+.chat-input:focus { border-color: var(--focus-border); }
+.chat-input::placeholder { color: var(--muted); }
+.send-btn {
+  padding: 8px 14px; background: var(--accent); color: var(--accent-fg);
+  border: none; border-radius: 6px; cursor: pointer; font-size: 13px;
+  font-weight: 600; transition: opacity 0.15s;
+}
+.send-btn:hover { opacity: 0.9; }
+.send-btn:disabled { opacity: 0.4; cursor: default; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-icon">\u2728</span>
+  <span class="header-title">Jarvis</span>
+  <span class="header-subtitle">VibeCode AI Assistant</span>
+  <button class="gear-btn" id="gearBtn" onclick="configureKeys()" title="Configure API Keys" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:16px;line-height:1;">\u2699</button>
+  <button class="clear-btn" id="clearBtn" onclick="clearHistory()" title="Clear Chat History" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:14px;line-height:1;">\u2715</button>
+</div>
+<div class="messages" id="messages">
+  <div class="msg assistant">
+    <div class="msg-avatar">J</div>
+    <div>
+      <div class="msg-bubble">Hello! I'm Jarvis, your VibeCode AI assistant. I can help with code generation, debugging, project management, and more. What would you like to work on?</div>
+      <div class="msg-time">Just now</div>
+    </div>
+  </div>
+</div>
+<div class="input-area">
+  <textarea class="chat-input" id="chatInput" placeholder="Ask Jarvis anything..." rows="1"
+    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+  <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+</div>
+<script>
+(function() {
+  'use strict';
+  var vscode = acquireVsCodeApi ? acquireVsCodeApi() : null;
+  var messagesEl = document.getElementById('messages');
+  var inputEl = document.getElementById('chatInput');
+  var sendBtn = document.getElementById('sendBtn');
+
+  function addMessage(text, role, model) {
+    var typingEl = document.querySelector('.typing-indicator');
+    if (typingEl) typingEl.remove();
+    var msgDiv = document.createElement('div');
+    msgDiv.className = 'msg ' + role;
+    var avatar = role === 'user' ? 'U' : 'J';
+    var time = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    var modelTag = (role === 'assistant' && model) ? ' <span style="font-size:9px;color:var(--muted);opacity:0.7;">(' + escapeHtml(model) + ')</span>' : '';
+    msgDiv.innerHTML = '<div class="msg-avatar">' + avatar + '</div><div>' +
+      '<div class="msg-bubble">' + escapeHtml(text) + '</div>' +
+      '<div class="msg-time">' + time + modelTag + '</div></div>';
+    messagesEl.appendChild(msgDiv);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function showTyping() {
+    var typing = document.createElement('div');
+    typing.className = 'typing-indicator';
+    typing.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+    messagesEl.appendChild(typing);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  window.sendMessage = function() {
+    var text = inputEl.value.trim();
+    if (!text) return;
+    addMessage(text, 'user');
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    showTyping();
+    if (vscode) {
+      vscode.postMessage({ type: 'chatMessage', text: text });
+    }
+  };
+
+  window.configureKeys = function() {
+    if (vscode) {
+      vscode.postMessage({ type: 'configureApiKeys' });
+    }
+  };
+
+  window.clearHistory = function() {
+    var messagesEl = document.getElementById('messages');
+    messagesEl.innerHTML = '';
+    if (vscode) {
+      vscode.postMessage({ type: 'clearHistory' });
+    }
+  };
+
+  window.addEventListener('message', function(event) {
+    var msg = event.data;
+    if (msg && msg.type === 'chatResponse' && msg.text) {
+      addMessage(msg.text, 'assistant', msg.model);
+    } else if (msg && msg.type === 'typingStart') {
+      showTyping();
+    } else if (msg && msg.type === 'chatStreamToken' && msg.token) {
+      // Handle streaming tokens — append to last assistant message or create new one
+      var lastMsg = messagesEl.querySelector('.msg.assistant:last-child .msg-bubble');
+      if (!lastMsg || !lastMsg.getAttribute('data-streaming')) {
+        // Remove typing indicator
+        var typingEl = document.querySelector('.typing-indicator');
+        if (typingEl) typingEl.remove();
+        // Create new streaming message
+        addMessage('', 'assistant');
+        lastMsg = messagesEl.querySelector('.msg.assistant:last-child .msg-bubble');
+        if (lastMsg) lastMsg.setAttribute('data-streaming', 'true');
+      }
+      if (lastMsg) {
+        lastMsg.textContent += msg.token;
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+    } else if (msg && msg.type === 'historyCleared') {
+      var messagesEl2 = document.getElementById('messages');
+      messagesEl2.innerHTML = '<div class="msg assistant"><div class="msg-avatar">J</div><div><div class="msg-bubble">Chat history cleared. How can I help you?</div><div class="msg-time">Just now</div></div></div>';
+    }
+  });
+
+  inputEl.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+
+  inputEl.focus();
+})();
+</script>
+</body>
+</html>`;
+        }
+}
+
+// =====================================================================================
+// COMMAND PALETTE REGISTRATIONS
+// Expose all AI sidebar panels as discoverable commands.
+// =====================================================================================
+
+CommandsRegistry.registerCommand('aiExecution.showKnowledgeGraph', {
+        handler: (accessor: any) => {
+                const commandService = accessor.get(ICommandService);
+                commandService.executeCommand(`${AI_KNOWLEDGE_GRAPH_VIEW_ID}.focus`);
+        },
+        description: { description: 'Open the Knowledge Graph visualization panel' },
+});
+
+CommandsRegistry.registerCommand('aiExecution.showMemory', {
+        handler: (accessor: any) => {
+                const commandService = accessor.get(ICommandService);
+                commandService.executeCommand(`${AI_MEMORY_VIEW_ID}.focus`);
+        },
+        description: { description: 'Open the Memory visualization panel' },
+});
+
+CommandsRegistry.registerCommand('aiExecution.showJarvis', {
+        handler: (accessor: any) => {
+                const commandService = accessor.get(ICommandService);
+                commandService.executeCommand(`${AI_JARVIS_VIEW_ID}.focus`);
+        },
+        description: { description: 'Open the Jarvis AI chat panel' },
+});
+
+CommandsRegistry.registerCommand('aiExecution.showWorkflow', {
+        handler: (accessor: any) => {
+                const commandService = accessor.get(ICommandService);
+                commandService.executeCommand(`${AI_WORKFLOW_VIEW_ID}.focus`);
+        },
+        description: { description: 'Open the AI Workflow panel' },
+});
+
+// ─── AI Action Commands (wired to keybindings) ──────────────────────────────────
+
+CommandsRegistry.registerCommand('aiExecution.triggerInlineCompletion', {
+        handler: (accessor: any) => {
+                const commandService = accessor.get(ICommandService);
+                // Delegate to VS Code's inline completion trigger
+                commandService.executeCommand('editor.action.inlineSuggest.trigger');
+        },
+        description: { description: 'Trigger AI inline completion at cursor position' },
+});
+
+CommandsRegistry.registerCommand('aiExecution.executePlan', {
+        handler: async (accessor: any) => {
+                const commandService = accessor.get(ICommandService);
+                const logService = accessor.get(ILogService);
+                logService.info('[AIProduct] Execute AI plan triggered via keybinding');
+                // Execute the current cached plan
+                commandService.executeCommand('aiExecution.startExecution');
+        },
+        description: { description: 'Execute the current AI plan' },
+});
+
+CommandsRegistry.registerCommand('aiExecution.rollbackChange', {
+        handler: async (accessor: any) => {
+                const logService = accessor.get(ILogService);
+                logService.info('[AIProduct] Rollback last AI change triggered via keybinding');
+                // Use git undo as the rollback mechanism
+                const commandService = accessor.get(ICommandService);
+                commandService.executeCommand('git.undo');
+        },
+        description: { description: 'Rollback the last AI-generated change' },
+});
+
+CommandsRegistry.registerCommand('aiExecution.toggleAutonomous', {
+        handler: async (accessor: any) => {
+                const logService = accessor.get(ILogService);
+                const autonomousExecutionService = accessor.get(IAutonomousExecutionService);
+                const state = autonomousExecutionService.getExecutionState();
+                if (state.stage === ExecutionStage.Executing || state.stage === ExecutionStage.Paused) {
+                        if (state.stage === ExecutionStage.Executing) {
+                                autonomousExecutionService.pauseExecution();
+                                logService.info('[AIProduct] Autonomous execution paused via keybinding');
+                        } else {
+                                autonomousExecutionService.resumeExecution();
+                                logService.info('[AIProduct] Autonomous execution resumed via keybinding');
+                        }
+                } else {
+                        logService.info('[AIProduct] Toggle autonomous: no active execution to toggle');
+                }
+        },
+        description: { description: 'Toggle autonomous execution (pause/resume)' },
+});
+
+// ─── API Key Configuration Command ──────────────────────────────────────────────
+
+CommandsRegistry.registerCommand('aiExecution.configureApiKeys', {
+        handler: async (accessor: any) => {
+                const quickInputService = accessor.get(IQuickInputService) as IQuickInputService;
+                const credentialStoreService = accessor.get(ICredentialStoreService) as ICredentialStoreService;
+                const llmProviderService = accessor.get(ILLMProviderService) as ILLMProviderService;
+                const logService = accessor.get(ILogService) as ILogService;
+
+                logService.info('[AIProduct] API key configuration started');
+
+                // Step 1: Select a provider
+                const providerItems = KNOWN_PROVIDER_CONFIGS.map(config => ({
+                        label: config.displayName,
+                        description: config.apiEndpoint,
+                        detail: config.isLocal ? 'Local provider — no API key needed' : `Default model: ${config.defaultModel}`,
+                        id: config.id,
+                        isLocal: config.isLocal,
+                }));
+
+                const selectedProvider = await quickInputService.pick(providerItems, {
+                        placeHolder: 'Select an LLM provider to configure',
+                        title: 'AI: Configure API Keys — Select Provider',
+                });
+
+                if (!selectedProvider) {
+                        return; // User cancelled
+                }
+
+                const providerId = selectedProvider.id;
+
+                // Skip API key input for local providers
+                if (selectedProvider.isLocal) {
+                        // For local providers, just set them as active
+                        llmProviderService.setActiveProvider(providerId);
+                        logService.info(`[AIProduct] Local provider "${providerId}" set as active`);
+
+                        // Validate the connection
+                        const status = await llmProviderService.validateProvider(providerId);
+                        const statusMessage = status === 'connected'
+                                ? `Connected to ${selectedProvider.label} successfully!`
+                                : `Could not reach ${selectedProvider.label}. Make sure it's running at ${selectedProvider.description}.`;
+
+                        quickInputService.pick([{ label: statusMessage }], {
+                                placeHolder: 'Connection test result',
+                                title: 'AI: Provider Connection Status',
+                        });
+                        return;
+                }
+
+                // Step 2: Enter API key
+                const existingKey = await credentialStoreService.hasKey(providerId);
+                const placeholder = existingKey
+                        ? 'Enter new API key (leave empty to keep current)'
+                        : 'Enter your API key';
+
+                const apiKey = await quickInputService.input({
+                        prompt: `Enter API key for ${selectedProvider.label}`,
+                        placeHolder,
+                        password: true, // Mask the input
+                        ignoreFocusLost: true,
+                });
+
+                if (apiKey === undefined) {
+                        return; // User cancelled
+                }
+
+                if (apiKey && apiKey.trim()) {
+                        // Step 3: Save the key
+                        await credentialStoreService.storeKey(providerId, apiKey.trim());
+                        logService.info(`[AIProduct] API key stored for provider "${providerId}"`);
+
+                        // Set as active provider
+                        llmProviderService.setActiveProvider(providerId);
+
+                        // Validate the key
+                        const validation = await credentialStoreService.validateKey(providerId);
+                        const statusMessage = validation.validationStatus === 'connected'
+                                ? `API key validated! ${selectedProvider.label} is ready to use.`
+                                : validation.validationStatus === 'auth-required'
+                                        ? `Key saved but validation failed. The key may be invalid.`
+                                        : `Key saved. Validation status: ${validation.validationStatus}`;
+
+                        quickInputService.pick([{ label: statusMessage }], {
+                                placeHolder: 'Validation result',
+                                title: 'AI: API Key Validation',
+                        });
+                } else if (apiKey === '' && existingKey) {
+                        // User cleared the key — delete it
+                        await credentialStoreService.deleteKey(providerId);
+                        logService.info(`[AIProduct] API key deleted for provider "${providerId}"`);
+                }
+        },
+        description: { description: 'Configure API keys for LLM providers' },
+});
 
 // =====================================================================================
 // AUTO-INITIALIZATION

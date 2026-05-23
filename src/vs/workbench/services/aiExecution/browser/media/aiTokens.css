@@ -140,3 +140,181 @@
   --ai-accent-hover: #8aa4ff;
   --ai-accent-muted: rgba(108,140,255,0.2);
 }
+
+/* ==========================================================================
+ *  VibeCode Brand Token Layer
+ *  These --vibecode-* custom properties are the canonical brand palette.
+ *  They override --ai-* color tokens inside VibeCode-owned surfaces.
+ *  At runtime, RealUIIntegrationService also injects these dynamically
+ *  and syncs them when VS Code's active theme changes.
+ * ========================================================================== */
+
+/* VibeCode Dark 2026 (default) */
+:root,
+.vs-dark,
+.hc-black {
+  /* Brand Colors */
+  --vibecode-primary: #8B5CF6;
+  --vibecode-primary-hover: #A78BFA;
+  --vibecode-primary-muted: rgba(139, 92, 246, 0.15);
+  --vibecode-primary-subtle: rgba(139, 92, 246, 0.08);
+
+  --vibecode-secondary: #06B6D4;
+  --vibecode-secondary-hover: #22D3EE;
+  --vibecode-secondary-muted: rgba(6, 182, 212, 0.15);
+  --vibecode-secondary-subtle: rgba(6, 182, 212, 0.08);
+
+  /* Background */
+  --vibecode-bg-gradient-start: #1E1B4B;
+  --vibecode-bg-gradient-end: #09090B;
+  --vibecode-bg-solid: #0F0E1A;
+
+  /* Surface */
+  --vibecode-surface: rgba(255, 255, 255, 0.04);
+  --vibecode-surface-raised: rgba(255, 255, 255, 0.07);
+  --vibecode-surface-overlay: rgba(255, 255, 255, 0.10);
+  --vibecode-surface-sunken: rgba(0, 0, 0, 0.20);
+
+  /* Text */
+  --vibecode-text: #FAFAFA;
+  --vibecode-text-secondary: #A1A1AA;
+  --vibecode-text-disabled: #52525B;
+  --vibecode-text-inverse: #FFFFFF;
+
+  /* Muted */
+  --vibecode-muted: #A1A1AA;
+
+  /* Border */
+  --vibecode-border: rgba(255, 255, 255, 0.08);
+  --vibecode-border-hover: rgba(255, 255, 255, 0.15);
+  --vibecode-border-focus: #8B5CF6;
+
+  /* Status */
+  --vibecode-status-success: #34D399;
+  --vibecode-status-warning: #FBBF24;
+  --vibecode-status-error: #F87171;
+  --vibecode-status-info: #60A5FA;
+}
+
+/* VibeCode Light 2026 */
+.vs {
+  /* Brand Colors */
+  --vibecode-primary: #7C3AED;
+  --vibecode-primary-hover: #6D28D9;
+  --vibecode-primary-muted: rgba(124, 58, 237, 0.12);
+  --vibecode-primary-subtle: rgba(124, 58, 237, 0.06);
+
+  --vibecode-secondary: #0891B2;
+  --vibecode-secondary-hover: #0E7490;
+  --vibecode-secondary-muted: rgba(8, 145, 178, 0.12);
+  --vibecode-secondary-subtle: rgba(8, 145, 178, 0.06);
+
+  /* Background */
+  --vibecode-bg-gradient-start: #FFFFFF;
+  --vibecode-bg-gradient-end: #F4F4F5;
+  --vibecode-bg-solid: #FFFFFF;
+
+  /* Surface */
+  --vibecode-surface: rgba(0, 0, 0, 0.03);
+  --vibecode-surface-raised: rgba(0, 0, 0, 0.05);
+  --vibecode-surface-overlay: rgba(0, 0, 0, 0.08);
+  --vibecode-surface-sunken: rgba(0, 0, 0, 0.02);
+
+  /* Text */
+  --vibecode-text: #09090B;
+  --vibecode-text-secondary: #71717A;
+  --vibecode-text-disabled: #A1A1AA;
+  --vibecode-text-inverse: #FFFFFF;
+
+  /* Muted */
+  --vibecode-muted: #71717A;
+
+  /* Border */
+  --vibecode-border: rgba(0, 0, 0, 0.10);
+  --vibecode-border-hover: rgba(0, 0, 0, 0.18);
+  --vibecode-border-focus: #7C3AED;
+
+  /* Status */
+  --vibecode-status-success: #059669;
+  --vibecode-status-warning: #D97706;
+  --vibecode-status-error: #DC2626;
+  --vibecode-status-info: #2563EB;
+}
+
+/* === VibeCode Override Layer === */
+/* These rules override VS Code's native CSS variables inside VibeCode surfaces,
+   ensuring the dark-first palette wins even when VS Code switches themes. */
+
+.vibecode-surface,
+.monaco-workbench .vibecode-surface {
+  --vscode-editor-background: var(--vibecode-bg-solid);
+  --vscode-editor-foreground: var(--vibecode-text);
+  --vscode-sideBar-background: var(--vibecode-surface);
+  --vscode-panel-background: var(--vibecode-surface);
+  --vscode-panel-border: var(--vibecode-border);
+  --vscode-button-background: var(--vibecode-primary);
+  --vscode-button-foreground: var(--vibecode-text-inverse);
+  --vscode-button-hoverBackground: var(--vibecode-primary-hover);
+  --vscode-focusBorder: var(--vibecode-border-focus);
+  --vscode-input-background: var(--vibecode-surface-sunken);
+  --vscode-input-foreground: var(--vibecode-text);
+  --vscode-input-border: var(--vibecode-border);
+  --vscode-input-placeholderForeground: var(--vibecode-text-disabled);
+  --vscode-badge-background: var(--vibecode-primary-muted);
+  --vscode-badge-foreground: var(--vibecode-primary);
+  --vscode-list-hoverBackground: var(--vibecode-surface-raised);
+  --vscode-list-activeSelectionBackground: var(--vibecode-primary-muted);
+  --vscode-list-activeSelectionForeground: var(--vibecode-primary);
+}
+
+/* Force workbench background gradient on body */
+body.vibecode-dark-first {
+  background: linear-gradient(135deg, var(--vibecode-bg-gradient-start), var(--vibecode-bg-gradient-end)) !important;
+}
+
+body.vibecode-dark-first .monaco-workbench {
+  background: transparent;
+}
+
+body.vibecode-light-first {
+  background: var(--vibecode-bg-solid) !important;
+}
+
+/* === VibeCode Utility Classes === */
+.vibecode-bg { background: var(--vibecode-bg-solid); }
+.vibecode-bg-gradient { background: linear-gradient(135deg, var(--vibecode-bg-gradient-start), var(--vibecode-bg-gradient-end)); }
+.vibecode-text { color: var(--vibecode-text); }
+.vibecode-text-muted { color: var(--vibecode-muted); }
+.vibecode-text-brand { color: var(--vibecode-primary); }
+.vibecode-border { border-color: var(--vibecode-border); }
+
+.vibecode-btn-primary {
+  background: var(--vibecode-primary); color: var(--vibecode-text-inverse);
+  border: none; border-radius: 6px; padding: 6px 16px; cursor: pointer;
+  font-weight: 600; transition: background 0.15s ease;
+}
+.vibecode-btn-primary:hover { background: var(--vibecode-primary-hover); }
+.vibecode-btn-primary:focus-visible { outline: 2px solid var(--vibecode-border-focus); outline-offset: 2px; }
+
+.vibecode-badge {
+  display: inline-flex; align-items: center; padding: 2px 8px;
+  border-radius: 9999px; font-size: 11px; font-weight: 600;
+}
+.vibecode-badge-primary { background: var(--vibecode-primary-muted); color: var(--vibecode-primary); }
+.vibecode-badge-secondary { background: var(--vibecode-secondary-muted); color: var(--vibecode-secondary); }
+
+.vibecode-progress-bar {
+  background: var(--vibecode-border); border-radius: 9999px; height: 4px; overflow: hidden;
+}
+.vibecode-progress-fill {
+  background: linear-gradient(90deg, var(--vibecode-primary), var(--vibecode-secondary));
+  height: 100%; border-radius: 9999px; transition: width 0.3s ease;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .vibecode-btn-primary,
+  .vibecode-progress-fill {
+    transition: none !important;
+  }
+}

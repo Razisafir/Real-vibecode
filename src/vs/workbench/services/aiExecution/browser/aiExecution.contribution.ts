@@ -117,6 +117,12 @@ import { AgentOrchestratorService } from './agentOrchestratorService.js';
 import { IAIContextService } from '../common/aiContextService.js';
 import { AIContextService } from './aiContextService.js';
 
+// ---- VISUALIZATION (2) — render graph/memory as HTML for webviews ----
+import { IKnowledgeGraphVisualizationService } from './knowledgeGraphVisualizationService.js';
+import { KnowledgeGraphVisualizationService } from './knowledgeGraphVisualizationService.js';
+import { IMemoryVisualizationService } from './memoryVisualizationService.js';
+import { MemoryVisualizationService } from './memoryVisualizationService.js';
+
 // ---- Real UI Product Contribution ----
 import './aiProductContribution.js';
 
@@ -181,3 +187,7 @@ registerSingleton(IAIUnifiedStateService, AIUnifiedStateService, InstantiationTy
 registerSingleton(IGitWorkflowService, GitWorkflowService, InstantiationType.Delayed);
 registerSingleton(IRepositoryIntelligenceService, RepositoryIntelligenceService, InstantiationType.Delayed);
 registerSingleton(IAIExecutionService, AIExecutionService, InstantiationType.Delayed);
+
+// VISUALIZATION (2) — render graph/memory as HTML for sidebar webview panels
+registerSingleton(IKnowledgeGraphVisualizationService, KnowledgeGraphVisualizationService, InstantiationType.Delayed);
+registerSingleton(IMemoryVisualizationService, MemoryVisualizationService, InstantiationType.Delayed);

@@ -5,7 +5,7 @@
   "author": {
     "name": "Real Vibecode Project"
   },
-  "license": "UNLICENSED",
+  "license": "Proprietary - Free to Use",
   "description": "AI-native IDE built on VS Code with multi-provider LLM support and autonomous execution",
   "main": "./out/main.js",
   "private": true,
