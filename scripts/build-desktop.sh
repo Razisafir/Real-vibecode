@@ -306,7 +306,7 @@ compile_source() {
     # VS Code 1.121.0+ requires npm (yarn is no longer supported)
     # Step 1: Ensure dependencies are fully installed
     log_info "Installing dependencies with npm..."
-    npm install --network-timeout 600000 2>&1 | tail -10
+    npm install 2>&1 | tail -10
     
     # Step 2: Compile the core
     log_info "Running npm run compile..."

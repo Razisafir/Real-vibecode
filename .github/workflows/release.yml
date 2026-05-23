@@ -74,7 +74,7 @@ jobs:
         working-directory: .
 
       - name: Install VS Code dependencies
-        run: npm install --network-timeout 600000
+        run: npm install
         shell: bash
         working-directory: vscode-source
 
@@ -171,7 +171,7 @@ jobs:
         shell: bash
 
       - name: Install VS Code dependencies
-        run: npm install --network-timeout 600000
+        run: npm install
         shell: bash
         working-directory: vscode-source
 
@@ -277,7 +277,7 @@ jobs:
         shell: bash
 
       - name: Install VS Code dependencies
-        run: npm install --network-timeout 600000
+        run: npm install
         shell: bash
         working-directory: vscode-source
 
