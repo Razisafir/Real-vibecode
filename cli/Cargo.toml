@@ -1,19 +1,41 @@
-[workspace]
+[package]
 name = "real-vibecode-cli"
-version = "0.1.0"
-resolver = "2"
-
-[workspace.package]
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-
-# NOTE: The actual CLI workspace members and binary targets
-# should mirror the upstream VS Code CLI structure.
-# This file provides branding overrides only.
-# The full workspace members list will be merged from upstream
-# during the build process.
+description = "Real Vibecode CLI — terminal-based AI coding assistant"
 
 [[bin]]
 name = "real-vibecode"
 path = "src/main.rs"
+
+[dependencies]
+# CLI argument parsing
+clap = { version = "4", features = ["derive", "env"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP client with streaming support
+reqwest = { version = "0.12", features = ["stream", "json"] }
+
+# Stream utilities
+futures = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Terminal colors and formatting
+colored = "2"
+
+# Terminal utilities (interactive input, raw mode)
+console = "0.15"
+indicatif = "0.17"
+
+# SSE parsing
+eventsource-stream = "0.2"
+
+# Error handling
+anyhow = "1"
+thiserror = "1"

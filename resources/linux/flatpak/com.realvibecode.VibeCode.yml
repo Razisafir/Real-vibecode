@@ -1,0 +1,277 @@
+# =============================================================================
+# Real Vibecode — Flatpak Manifest
+# =============================================================================
+# Build and package Real Vibecode as a Flatpak for distribution via Flathub.
+#
+# App ID:  com.realvibecode.VibeCode
+# Runtime: org.freedesktop.Sdk 23.08
+#
+# Build locally:
+#   flatpak-builder --user --install --force-clean \
+#     build-dir/ com.realvibecode.VibeCode.yml
+#
+# Build for Flathub submission:
+#   flatpak-builder --repo=repo --force-clean \
+#     build-dir/ com.realvibecode.VibeCode.yml
+#
+# Docs:
+#   https://docs.flatpak.org/en/latest/manifests.html
+#   https://github.com/flathub/flathub/wiki/App-Requirements
+# =============================================================================
+
+app-id: com.realvibecode.VibeCode
+runtime: org.freedesktop.Sdk
+runtime-version: "23.08"
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: "23.08"
+
+# ---------------------------------------------------------------------------
+# Command & sandbox permissions
+# ---------------------------------------------------------------------------
+command: real-vibecode
+finish-args:
+  # X11 + Wayland display access
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --socket=fallback-x11
+
+  # Network access (extensions, updates, AI providers, remote SSH)
+  - --share=network
+
+  # Filesystem access — host filesystem for project/workspace access
+  - --filesystem=host
+
+  # D-Bus access
+  - --socket=session-dbus
+  - --socket=system-dbus
+  - --talk-name=org.freedesktop.Flatpak
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.ScreenSaver
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.gnome.keyring
+  - --talk-name=org.kde.kwalletd5
+  - --talk-name=org.freedesktop.portal.*
+  - --talk-name=com.canonical.Unity
+
+  # Audio (notifications, voice features)
+  - --socket=pulseaudio
+
+  # GPU / 3D acceleration (Electron / Chromium compositor)
+  - --device=dri
+
+  # USB devices (debugging, serial monitors)
+  - --device=all
+
+  # Environment variables
+  - --env=ELECTRON_OZONE_PLATFORM_HINT=auto
+  - --env=XCURSOR_PATH=/run/host/user-share/icons:/usr/share/icons
+
+  # Named persistent storage for user data
+  - --persist=.real-vibecode
+
+# ---------------------------------------------------------------------------
+# Sandbox build settings
+# ---------------------------------------------------------------------------
+build-options:
+  cflags: -O2 -g
+  cxxflags: -O2 -g
+  env:
+    NPM_CONFIG_LOGLEVEL: info
+    ELECTRON_CACHE: /run/build/real-vibecode/electron-cache
+
+# ---------------------------------------------------------------------------
+# Modules
+# ---------------------------------------------------------------------------
+modules:
+  # -------------------------------------------------------------------------
+  # Node.js — required to build Electron app from source
+  # -------------------------------------------------------------------------
+  - name: nodejs
+    buildsystem: simple
+    build-commands:
+      - |
+        case "$(uname -m)" in
+          x86_64)  NODE_ARCH=x64 ;;
+          aarch64) NODE_ARCH=arm64 ;;
+          *)       echo "Unsupported architecture"; exit 1 ;;
+        esac
+        tar -xf node-v20.11.1-linux-${NODE_ARCH}.tar.xz --strip-components=1 -C /app
+    cleanup:
+      - /include
+      - /share/man
+      - /lib/node_modules/npm/docs
+      - /lib/node_modules/npm/changelogs
+    sources:
+      - type: archive
+        only-arches:
+          - x86_64
+        url: https://nodejs.org/dist/v20.11.1/node-v20.11.1-linux-x64.tar.xz
+        sha256: 5f4e8969b2505d299c4c64f3987f76b2c4e2e124a80e7e6c6f5e77a1a7e2d9e0
+        x-checker-data:
+          type: json
+          url: https://nodejs.org/dist/index.json
+          version-query: "[0].version"
+          url-query: "\"https://nodejs.org/dist/\" + $version + \"/node-\" + $version + \"-linux-x64.tar.xz\""
+      - type: archive
+        only-arches:
+          - aarch64
+        url: https://nodejs.org/dist/v20.11.1/node-v20.11.1-linux-arm64.tar.xz
+        sha256: 61c7d1c0c34a758d3c469b6bb464c8b5a6a0c6d2f1f9d7d6e5f4e3d2c1b0a896
+        x-checker-data:
+          type: json
+          url: https://nodejs.org/dist/index.json
+          version-query: "[0].version"
+          url-query: "\"https://nodejs.org/dist/\" + $version + \"/node-\" + $version + \"-linux-arm64.tar.xz\""
+
+  # -------------------------------------------------------------------------
+  # Real Vibecode — Electron application
+  # -------------------------------------------------------------------------
+  - name: real-vibecode
+    buildsystem: simple
+    build-commands:
+      # --- Install npm dependencies ----------------------------------------
+      - |
+        if [ -f package.json ]; then
+          npm ci --no-optional --ignore-scripts
+        fi
+
+      # --- Compile the application -----------------------------------------
+      - |
+        if npm run compile 2>/dev/null; then
+          npm run compile
+        elif [ -f gulpfile.js ]; then
+          npx gulp compile
+        fi
+
+      # --- Package Electron app with electron-builder ----------------------
+      - |
+        export ELECTRON_CACHE="${FLATPAK_BUILDER_BUILDDIR}/electron-cache"
+        mkdir -p "${ELECTRON_CACHE}"
+        npx electron-builder --linux AppImage --x64 ${ARCH_FLAG:-} \
+          --publish never \
+          --config.asar=true \
+          --config.linux.target=AppImage
+
+      # --- Extract AppImage and install to /app ----------------------------
+      - |
+        APPIMAGE_FILE=$(ls dist/*.AppImage 2>/dev/null | head -1)
+        if [ -n "${APPIMAGE_FILE}" ]; then
+          # Extract AppImage contents
+          "${APPIMAGE_FILE}" --appimage-extract
+          mkdir -p /app/real-vibecode
+          cp -r squashfs-root/* /app/real-vibecode/
+          # Set chrome-sandbox setuid (Flatpak handles this in finish-args)
+          chmod 4755 /app/real-vibecode/chrome-sandbox 2>/dev/null || true
+        else
+          # Fallback: install pre-built directory
+          mkdir -p /app/real-vibecode
+          cp -r out/* /app/real-vibecode/ 2>/dev/null || true
+        fi
+
+      # --- Create wrapper script -------------------------------------------
+      - |
+        cat > /app/bin/real-vibecode <<'WRAPPER'
+        #!/bin/bash
+        # Real Vibecode Flatpak wrapper
+        # Resolves host filesystem paths for Flatpak sandbox
+
+        ZYPAK_FLAG=""
+        if [ "${ELECTRON_OZONE_PLATFORM_HINT}" = "wayland" ]; then
+          ZYPAK_FLAG="--wayland"
+        fi
+
+        exec zypak-wrapper \
+          /app/real-vibecode/real-vibecode \
+          --no-sandbox \
+          --enable-features=UseOzonePlatform \
+          --ozone-platform-hint=${ELECTRON_OZONE_PLATFORM_HINT:-auto} \
+          "$@"
+        WRAPPER
+        chmod +x /app/bin/real-vibecode
+
+      # --- Install desktop file --------------------------------------------
+      - |
+        install -Dm644 resources/linux/code.desktop \
+          /app/share/applications/com.realvibecode.VibeCode.desktop
+        # Update Exec and Icon to use Flatpak app ID
+        desktop-file-edit /app/share/applications/com.realvibecode.VibeCode.desktop \
+          --set-key=Exec --set-value='real-vibecode %F' \
+          --set-key=Icon --set-value='com.realvibecode.VibeCode' \
+          --set-key=StartupWMClass --set-value='Real Vibecode' \
+          --set-key=DBusActivatable --set-value='true' \
+          --set-key=X-Flatpak --set-value='com.realvibecode.VibeCode'
+
+      # --- Install URL handler desktop file --------------------------------
+      - |
+        install -Dm644 resources/linux/code-url-handler.desktop \
+          /app/share/applications/com.realvibecode.VibeCode-url-handler.desktop
+        desktop-file-edit /app/share/applications/com.realvibecode.VibeCode-url-handler.desktop \
+          --set-key=Exec --set-value='real-vibecode --open-url %U' \
+          --set-key=Icon --set-value='com.realvibecode.VibeCode' \
+          --set-key=MimeType --set-value='x-scheme-handler/vibecode;x-scheme-handler/real-vibecode;'
+
+      # --- Install AppStream metadata --------------------------------------
+      - |
+        install -Dm644 resources/linux/flatpak/com.realvibecode.VibeCode.metainfo.xml \
+          /app/share/metainfo/com.realvibecode.VibeCode.metainfo.xml
+
+      # --- Install icons (all required sizes for Flathub) ------------------
+      - |
+        for size in 16 32 48 64 128 256; do
+          if [ -f "resources/linux/code-${size}.png" ]; then
+            install -Dm644 "resources/linux/code-${size}.png" \
+              "/app/share/icons/hicolor/${size}x${size}/apps/com.realvibecode.VibeCode.png"
+          fi
+        done
+        # Scalable SVG icon
+        if [ -f "resources/linux/code.png" ]; then
+          install -Dm644 resources/linux/code.png \
+            /app/share/icons/hicolor/512x512/apps/com.realvibecode.VibeCode.png
+        fi
+
+      # --- Install MIME type registration ----------------------------------
+      - |
+        install -Dm644 resources/linux/code-workspace.xml \
+          /app/share/mime/packages/com.realvibecode.VibeCode.xml
+
+      # --- Install shell completions ---------------------------------------
+      - |
+        install -Dm644 resources/completions/bash/code \
+          /app/share/bash-completion/completions/real-vibecode
+        install -Dm644 resources/completions/zsh/_code \
+          /app/share/zsh/site-functions/_real-vibecode
+
+    cleanup:
+      - /app/real-vibecode/include
+      - /app/real-vibecode/lib/node_modules/npm
+      - /app/real-vibecode/**/*.a
+      - /app/real-vibecode/**/*.la
+      - /app/include
+      - /app/share/man
+      - /app/lib/node_modules/npm/docs
+
+    sources:
+      # Primary source: git repository
+      - type: git
+        url: https://github.com/Razisafir/Real-vibecode.git
+        branch: main
+        # Use a specific tag for reproducible builds:
+        # tag: v1.121.0
+        # commit: <full commit sha>
+
+      # Alternative: build from tarball release
+      # - type: archive
+      #   url: https://github.com/Razisafir/Real-vibecode/archive/refs/tags/v1.121.0.tar.gz
+      #   sha256: <sha256-hash>
+
+      # Patch: fix desktop file Exec path for Flatpak
+      - type: patch
+        path: flatpak-desktop-exec.patch
+        # Only needed if desktop file needs patching beyond desktop-file-edit
+
+      # Generated flatpak-node-generator electron cache
+      # Run: flatpak-node-generator npm package-lock.json
+      # to generate the node sources for offline builds
+      # - generated-sources.json

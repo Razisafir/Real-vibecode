@@ -25,11 +25,13 @@ import { generateUuid } from '../../../../base/common/uuid.js';
 import {
         ILLMProviderService, IModelRegistryService, ICredentialStoreService,
         ILLMStreamingService, IProviderHealthService,
-        LLMProviderConfig, ModelInfo, LLMRequest, LLMResponse,
-        LLMMessage, StreamChunk, StreamChunkType,
+        IDynamicModelDiscoveryService, DiscoveredModel,
+        LLMProviderConfig, LLMProviderType, ModelInfo, LLMRequest, LLMResponse,
+        LLMMessage, LLMToolCall, StreamChunk, StreamChunkType,
         ProviderConnectionStatus, ProviderHealth, HealthSeverity,
         FallbackChainConfig, FallbackBehavior,
         KNOWN_PROVIDER_CONFIGS, KNOWN_MODELS,
+        OLLAMA_TOOL_CAPABLE_FAMILIES, OLLAMA_VISION_CAPABLE_FAMILIES,
 } from '../common/llmProvider.js';
 import { ICostGovernorService } from '../common/costGovernor.js';
 
@@ -388,6 +390,8 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                                 return `${config.apiEndpoint}/chat/completions`;
                         case 6: // Generic OpenAI
                                 return `${config.apiEndpoint}/chat/completions`;
+                        case 7: // Proxima (OpenAI-compatible)
+                                return `${config.apiEndpoint}/chat/completions`;
                         default:
                                 return `${config.apiEndpoint}/chat/completions`;
                 }
@@ -421,14 +425,17 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                         case 6: // Generic OpenAI
                                 if (apiKey) { headers['Authorization'] = `Bearer ${apiKey}`; }
                                 break;
+                        case 7: // Proxima (optional auth)
+                                if (apiKey) { headers['Authorization'] = `Bearer ${apiKey}`; }
+                                break;
                 }
 
                 return headers;
         }
 
         private buildRequestBody(config: LLMProviderConfig, request: LLMRequest): Record<string, unknown> {
-                // OpenAI-compatible format (works for OpenAI, OpenRouter, LM Studio, Generic)
-                if ([0, 3, 5, 6].includes(config.type)) {
+                // OpenAI-compatible format (works for OpenAI, OpenRouter, LM Studio, Generic, Proxima)
+                if ([0, 3, 5, 6, 7].includes(config.type)) {
                         const body: Record<string, unknown> = {
                                 model: request.model,
                                 messages: request.messages.map(m => ({
@@ -509,11 +516,18 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                         return body;
                 }
 
-                // Ollama format
+                // Ollama format (with tool/function calling support)
                 if (config.type === 4) {
-                        return {
+                        const body: Record<string, unknown> = {
                                 model: request.model,
-                                messages: request.messages.map(m => ({ role: m.role, content: m.content })),
+                                messages: request.messages.map(m => ({
+                                        role: m.role,
+                                        content: m.content,
+                                        ...(m.toolCalls ? { tool_calls: m.toolCalls.map((tc: LLMToolCall) => ({
+                                                function: { name: tc.name, arguments: tc.arguments },
+                                        })) } : {}),
+                                        ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
+                                })),
                                 stream: false,
                                 options: {
                                         num_predict: request.maxTokens || 4096,
@@ -521,6 +535,15 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                                         top_p: request.topP,
                                 },
                         };
+                        // Include tool definitions if the model supports them
+                        if (request.tools && request.tools.length > 0 && this.ollamaModelSupportsTools(request.model)) {
+                                body.tools = request.tools.map(t => ({
+                                        type: 'function',
+                                        function: { name: t.name, description: t.description, parameters: t.parameters },
+                                }));
+                        }
+                        if (request.stopSequences) { body.options = { ...body.options, stop: request.stopSequences }; }
+                        return body;
                 }
 
                 // Fallback: OpenAI format
@@ -531,9 +554,40 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                 };
         }
 
+        /**
+         * Check if an Ollama model supports tool/function calling based on its family.
+         * Ollama tool support is model-dependent; older models like llama3 (not 3.1+)
+         * do not support function calling.
+         */
+        private ollamaModelSupportsTools(modelName: string): boolean {
+                // Extract the base family name from the model tag
+                // e.g. "llama3.1:70b" -> "llama3.1", "mistral-nemo" -> "mistral-nemo"
+                const baseName = modelName.split(':')[0].toLowerCase();
+                // Check against known tool-capable families
+                for (const family of OLLAMA_TOOL_CAPABLE_FAMILIES) {
+                        if (baseName === family || baseName.startsWith(family)) {
+                                return true;
+                        }
+                }
+                return false;
+        }
+
+        /**
+         * Check if an Ollama model supports vision/multimodal input.
+         */
+        private ollamaModelSupportsVision(modelName: string): boolean {
+                const baseName = modelName.split(':')[0].toLowerCase();
+                for (const family of OLLAMA_VISION_CAPABLE_FAMILIES) {
+                        if (baseName === family || baseName.startsWith(family)) {
+                                return true;
+                        }
+                }
+                return false;
+        }
+
         private parseProviderResponse(config: LLMProviderConfig, request: LLMRequest, json: any, latencyMs: number): LLMResponse {
-                // OpenAI-compatible response
-                if ([0, 3, 5, 6].includes(config.type)) {
+                // OpenAI-compatible response (OpenAI, OpenRouter, LM Studio, Generic, Proxima)
+                if ([0, 3, 5, 6, 7].includes(config.type)) {
                         const choice = json.choices?.[0];
                         const usage = json.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
                         return {
@@ -616,20 +670,59 @@ export class LLMProviderService extends Disposable implements ILLMProviderServic
                         };
                 }
 
-                // Ollama response
+                // Ollama response (with tool call support)
                 if (config.type === 4) {
+                        const toolCalls: LLMToolCall[] = [];
+                        // Ollama returns tool_calls in the message for models that support them
+                        if (json.message?.tool_calls && Array.isArray(json.message.tool_calls)) {
+                                for (const tc of json.message.tool_calls) {
+                                        toolCalls.push({
+                                                id: tc.id || generateUuid(),
+                                                name: tc.function?.name || '',
+                                                arguments: typeof tc.function?.arguments === 'string'
+                                                        ? tc.function.arguments
+                                                        : JSON.stringify(tc.function?.arguments || {}),
+                                        });
+                                }
+                        }
                         return {
                                 requestId: request.requestId,
                                 providerId: config.id,
                                 model: json.model || request.model,
                                 content: json.message?.content || '',
-                                toolCalls: [],
+                                toolCalls,
                                 usage: {
                                         promptTokens: json.prompt_eval_count || 0,
                                         completionTokens: json.eval_count || 0,
                                         totalTokens: (json.prompt_eval_count || 0) + (json.eval_count || 0),
                                 },
-                                finishReason: json.done ? 'stop' : 'incomplete',
+                                finishReason: json.done ? (toolCalls.length > 0 ? 'tool_calls' : 'stop') : 'incomplete',
+                                latencyMs,
+                                timestamp: Date.now(),
+                                fromCache: false,
+                        };
+                }
+
+                // Proxima response (OpenAI-compatible format)
+                if (config.type === 7) {
+                        const choice = json.choices?.[0];
+                        const usage = json.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+                        return {
+                                requestId: request.requestId,
+                                providerId: config.id,
+                                model: json.model || request.model,
+                                content: choice?.message?.content || '',
+                                toolCalls: (choice?.message?.tool_calls || []).map((tc: any) => ({
+                                        id: tc.id || generateUuid(),
+                                        name: tc.function?.name || '',
+                                        arguments: tc.function?.arguments || '{}',
+                                })),
+                                usage: {
+                                        promptTokens: usage.prompt_tokens || 0,
+                                        completionTokens: usage.completion_tokens || 0,
+                                        totalTokens: usage.total_tokens || 0,
+                                },
+                                finishReason: choice?.finish_reason || 'stop',
                                 latencyMs,
                                 timestamp: Date.now(),
                                 fromCache: false,
@@ -826,7 +919,7 @@ export class CredentialStoreService extends Disposable implements ICredentialSto
         }
 
         async getAllCredentials(): Promise<ProviderCredential[]> {
-                const providers = ['openai', 'anthropic', 'google-gemini', 'openrouter', 'ollama', 'lm-studio', 'generic-openai'];
+                const providers = ['openai', 'anthropic', 'google-gemini', 'openrouter', 'ollama', 'lm-studio', 'proxima', 'generic-openai'];
                 const results: ProviderCredential[] = [];
                 for (const providerId of providers) {
                         results.push(await this.validateKey(providerId));
@@ -996,6 +1089,7 @@ export class LLMStreamingService extends Disposable implements ILLMStreamingServ
                         case 4: return `${config.apiEndpoint}/chat`;
                         case 5: return `${config.apiEndpoint}/chat/completions`;
                         case 6: return `${config.apiEndpoint}/chat/completions`;
+                        case 7: return `${config.apiEndpoint}/chat/completions`;
                         default: return `${config.apiEndpoint}/chat/completions`;
                 }
         }
@@ -1012,6 +1106,7 @@ export class LLMStreamingService extends Disposable implements ILLMStreamingServ
                         case 2: headers['x-goog-api-key'] = apiKey; break;
                         case 3: headers['Authorization'] = `Bearer ${apiKey}`; headers['HTTP-Referer'] = 'https://real-vibecode.dev'; break;
                         case 6: if (apiKey) { headers['Authorization'] = `Bearer ${apiKey}`; } break;
+                        case 7: if (apiKey) { headers['Authorization'] = `Bearer ${apiKey}`; } break;
                 }
 
                 return headers;
@@ -1025,12 +1120,30 @@ export class LLMStreamingService extends Disposable implements ILLMStreamingServ
                         stream: true,
                 };
                 if (request.temperature !== undefined) { base.temperature = request.temperature; }
+                if (request.topP !== undefined) { base.top_p = request.topP; }
+
+                // Include tool definitions for OpenAI-compatible providers
+                if ([0, 3, 5, 6, 7].includes(config.type) && request.tools && request.tools.length > 0) {
+                        base.tools = request.tools.map(t => ({
+                                type: 'function',
+                                function: { name: t.name, description: t.description, parameters: t.parameters },
+                        }));
+                }
+
+                // Include tool definitions for Ollama if the model supports them
+                if (config.type === 4 && request.tools && request.tools.length > 0 && this.ollamaModelSupportsTools(request.model)) {
+                        base.tools = request.tools.map(t => ({
+                                type: 'function',
+                                function: { name: t.name, description: t.description, parameters: t.parameters },
+                        }));
+                }
+
                 return base;
         }
 
         private parseStreamChunk(config: LLMProviderConfig, parsed: any): StreamChunk {
-                // OpenAI-compatible SSE
-                if ([0, 3, 5, 6].includes(config.type)) {
+                // OpenAI-compatible SSE (OpenAI, OpenRouter, LM Studio, Generic, Proxima)
+                if ([0, 3, 5, 6, 7].includes(config.type)) {
                         const delta = parsed.choices?.[0]?.delta;
                         if (delta?.content) {
                                 return { type: StreamChunkType.Token, content: delta.content, done: false };

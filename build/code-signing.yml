@@ -1,0 +1,697 @@
+# =============================================================================
+# Real Vibecode — Code Signing Configuration Reference
+# =============================================================================
+# Comprehensive guide to code signing for all supported platforms.
+# This file serves as both documentation and CI/CD configuration reference.
+#
+# IMPORTANT: Never commit certificates, keys, or passwords to version control.
+#            All secrets must be stored in CI/CD secret variables or a vault.
+#
+# Sections:
+#   1. Windows — Authenticode signing with signtool.exe
+#   2. macOS   — codesign + notarytool for notarization
+#   3. Linux   — GPG signing for DEB/RPM packages
+#   4. CI/CD   — Signing pipeline steps (GitHub Actions)
+#   5. Certificates — Required certificates and how to obtain them
+# =============================================================================
+
+
+# =============================================================================
+# 1. Windows — Authenticode Code Signing
+# =============================================================================
+# Signs: .exe, .dll, .msi installers
+# Tool:  signtool.exe (Windows SDK) or osslsigncode (cross-platform)
+# Type:  EV (Extended Validation) or OV (Organization Validation) certificate
+# =============================================================================
+
+windows:
+  # ---------------------------------------------------------------------------
+  # Certificate configuration
+  # ---------------------------------------------------------------------------
+  certificate:
+    # EV certificate (recommended — SmartScreen reputation)
+    # Stored in hardware token (YubiKey/USB) or cloud HSM
+    type: ev  # Options: ev, ov
+    # Subject name on the certificate
+    subject_name: "Real Vibecode Project"
+    # Timestamp server (RFC 3161)
+    timestamp_server: "http://timestamp.digicert.com"
+    # Alternative timestamp servers for redundancy
+    timestamp_servers:
+      - "http://timestamp.digicert.com"
+      - "http://timestamp.globalsign.com/scripts/timstamp.dll"
+      - "http://timestamp.comodoca.com/authenticode"
+    # Hash algorithm
+    digest_algorithm: sha256
+    # Certificate store location (for CI/CD with cloud HSM)
+    store: "My"  # Personal certificate store
+
+  # ---------------------------------------------------------------------------
+  # Environment variables (set in CI/CD secrets)
+  # ---------------------------------------------------------------------------
+  # WIN_CERT_PATH       — Path to .pfx/.p12 certificate file
+  #                       (or use cloud signing — see below)
+  # WIN_CERT_PASSWORD   — Password for the .pfx certificate
+  # WIN_CERT_SUBJECT    — Certificate subject name (for store-based signing)
+  # SIGNING_TOOL        — "signtool" or "osslsigncode"
+  #
+  # For Azure Key Vault / cloud HSM signing:
+  # AZURE_KEY_VAULT_URL      — Azure Key Vault URL
+  # AZURE_KEY_VAULT_CERT     — Certificate name in Key Vault
+  # AZURE_KEY_VAULT_CLIENT   — Azure AD client ID
+  # AZURE_KEY_VAULT_SECRET   — Azure AD client secret
+  # AZURE_KEY_VAULT_TENANT   — Azure AD tenant ID
+
+  # ---------------------------------------------------------------------------
+  # Signing commands
+  # ---------------------------------------------------------------------------
+  commands:
+    # Sign with signtool.exe (Windows)
+    signtool: >
+      signtool.exe sign
+      /fd sha256
+      /tr http://timestamp.digicert.com
+      /td sha256
+      /a
+      /n "Real Vibecode Project"
+      "${ARTIFACT_PATH}"
+
+    # Sign with osslsigncode (cross-platform — Linux/macOS CI runners)
+    osslsigncode: >
+      osslsigncode sign
+      -pkcs12 "${WIN_CERT_PATH}"
+      -pass "${WIN_CERT_PASSWORD}"
+      -n "Real Vibecode"
+      -i "https://github.com/Razisafir/Real-vibecode"
+      -ts http://timestamp.digicert.com
+      -h sha256
+      -in "${UNSIGNED_ARTIFACT}"
+      -out "${SIGNED_ARTIFACT}"
+
+    # Sign with Azure Key Vault (cloud HSM — no local certificate)
+    azure_key_vault: >
+      az azure-keyvault-sign
+      --key-vault-url "${AZURE_KEY_VAULT_URL}"
+      --certificate-name "${AZURE_KEY_VAULT_CERT}"
+      --digest-algorithm SHA256
+      --timestamp-url http://timestamp.digicert.com
+      --input-path "${UNSIGNED_ARTIFACT}"
+      --output-path "${SIGNED_ARTIFACT}"
+
+  # ---------------------------------------------------------------------------
+  # electron-builder integration
+  # ---------------------------------------------------------------------------
+  electron_builder:
+    # Windows signing is handled automatically by electron-builder
+    # when CSC_LINK and CSC_KEY_PASSWORD are set:
+    #   CSC_LINK         — Base64-encoded .pfx certificate (or file path)
+    #   CSC_KEY_PASSWORD — Certificate password
+    #
+    # In electron-builder.yml, ensure:
+    #   win.signAndEditExecutable: true
+    #   win.verifyUpdateCodeSignature: true
+    #
+    # For NSIS installer signing:
+    #   nsis.include: build/win32/installer.nsh
+    #   (Already configured in electron-builder.yml)
+
+  # ---------------------------------------------------------------------------
+  # Verification
+  # ---------------------------------------------------------------------------
+  verify:
+    # Verify signature on Windows
+    command: 'signtool.exe verify /pa /all "${SIGNED_ARTIFACT}"'
+    # Check with PowerShell
+    powershell: >
+      Get-AuthenticodeSignature "${SIGNED_ARTIFACT}"
+      | Format-List Status, StatusMessage, SignerCertificate
+
+
+# =============================================================================
+# 2. macOS — codesign + notarytool
+# =============================================================================
+# Signs: .app bundle, .dmg, .pkg
+# Tools: codesign, notarytool, xcrun (Xcode Command Line Tools)
+# Requirements: Apple Developer account + Developer ID certificate
+# =============================================================================
+
+macos:
+  # ---------------------------------------------------------------------------
+  # Certificate configuration
+  # ---------------------------------------------------------------------------
+  certificate:
+    # Developer ID Application certificate (for distribution outside App Store)
+    type: "Developer ID Application"
+    # Common name as it appears in Keychain
+    common_name: "Developer ID Application: Real Vibecode Project (TEAM_ID)"
+    # Team ID from Apple Developer Portal
+    team_id: "${APPLE_TEAM_ID}"
+    # Signing identity (used by codesign)
+    identity: "Developer ID Application: Real Vibecode Project (${APPLE_TEAM_ID})"
+
+  # ---------------------------------------------------------------------------
+  # Entitlements (hardened runtime)
+  # ---------------------------------------------------------------------------
+  entitlements:
+    # Production entitlements file
+    path: "build/darwin/entitlements.mac.plist"
+    # Inherit entitlements for child processes
+    inherit_path: "build/darwin/entitlements.mac.plist"
+    # Hardened runtime is required for notarization
+    hardened_runtime: true
+
+  # ---------------------------------------------------------------------------
+  # Environment variables (set in CI/CD secrets)
+  # ---------------------------------------------------------------------------
+  # APPLE_ID              — Apple ID email for notarization
+  # APPLE_ID_PASSWORD     — App-specific password (generate at appleid.apple.com)
+  # APPLE_TEAM_ID         — Apple Developer team ID
+  # CSC_LINK              — Base64-encoded .p12 certificate
+  # CSC_KEY_PASSWORD      — Certificate password
+  # MAC_CERT_PATH         — Path to .p12 certificate file (alternative)
+  # MAC_CERT_PASSWORD     — Certificate password (alternative)
+
+  # ---------------------------------------------------------------------------
+  # Signing commands
+  # ---------------------------------------------------------------------------
+  commands:
+    # Sign the .app bundle
+    sign_app: >
+      codesign --force --deep --options runtime
+      --entitlements build/darwin/entitlements.mac.plist
+      --entitlements build/darwin/entitlements.mac.plist
+      --sign "Developer ID Application: Real Vibecode Project (${APPLE_TEAM_ID})"
+      --timestamp
+      "${APP_BUNDLE_PATH}"
+
+    # Sign the DMG
+    sign_dmg: >
+      codesign --force --sign "Developer ID Application: Real Vibecode Project (${APPLE_TEAM_ID})"
+      --timestamp
+      "${DMG_PATH}"
+
+    # Submit for notarization
+    notarize_submit: >
+      xcrun notarytool submit "${DMG_PATH}"
+      --apple-id "${APPLE_ID}"
+      --password "${APPLE_ID_PASSWORD}"
+      --team-id "${APPLE_TEAM_ID}"
+      --wait
+      --timeout 30m
+
+    # Check notarization status
+    notarize_status: >
+      xcrun notarytool info "${SUBMISSION_ID}"
+      --apple-id "${APPLE_ID}"
+      --password "${APPLE_ID_PASSWORD}"
+      --team-id "${APPLE_TEAM_ID}"
+
+    # Staple the notarization ticket to the DMG
+    staple: >
+      xcrun stapler staple "${DMG_PATH}"
+
+    # Full notarization workflow (submit → wait → staple)
+    notarize_full: >
+      # Step 1: Submit for notarization
+      SUBMISSION_ID=$(xcrun notarytool submit "${DMG_PATH}"
+        --apple-id "${APPLE_ID}"
+        --password "${APPLE_ID_PASSWORD}"
+        --team-id "${APPLE_TEAM_ID}"
+        --wait 2>&1 | tee /dev/stderr | rg 'id: ([a-f0-9-]+)' -r '$1' | head -1)
+      echo "Notarization submission: ${SUBMISSION_ID}"
+      # Step 2: Staple the ticket
+      xcrun stapler staple "${DMG_PATH}"
+      echo "Notarization complete and stapled."
+
+  # ---------------------------------------------------------------------------
+  # electron-builder integration
+  # ---------------------------------------------------------------------------
+  electron_builder:
+    # macOS signing is handled automatically by electron-builder when:
+    #   CSC_LINK             — Base64-encoded .p12 certificate is set
+    #   CSC_KEY_PASSWORD     — Certificate password is set
+    #   APPLE_ID             — Apple ID email is set
+    #   APPLE_APP_SPECIFIC_PASSWORD — App-specific password (alt name for APPLE_ID_PASSWORD)
+    #   APPLE_TEAM_ID        — Team ID is set
+    #
+    # electron-builder.yml configuration (already set):
+    #   mac.hardenedRuntime: true
+    #   mac.entitlements: build/darwin/entitlements.mac.plist
+    #   mac.entitlementsInherit: build/darwin/entitlements.mac.plist
+    #   mac.gatekeeperAssess: false
+
+  # ---------------------------------------------------------------------------
+  # Verification
+  # ---------------------------------------------------------------------------
+  verify:
+    # Verify code signature
+    codesign_verify: 'codesign --verify --deep --strict --verbose=2 "${APP_BUNDLE_PATH}"'
+    # Check notarization
+    notarization_check: 'spctl --assess --type execute --verbose=2 "${APP_BUNDLE_PATH}"'
+    # Display signature details
+    display_signature: 'codesign --display --verbose=4 "${APP_BUNDLE_PATH}"'
+    # Check stapled ticket
+    check_staple: 'stapler check "${APP_BUNDLE_PATH}"'
+
+
+# =============================================================================
+# 3. Linux — GPG Signing for DEB/RPM Packages
+# =============================================================================
+# Signs: .deb (debsign), .rpm (rpmsign), repository metadata
+# Tool:  GnuPG (gpg)
+# Type:  OpenPGP key — upload to keys.openpgp.org and keyserver.ubuntu.com
+# =============================================================================
+
+linux:
+  # ---------------------------------------------------------------------------
+  # GPG key configuration
+  # ---------------------------------------------------------------------------
+  gpg:
+    # Key type and parameters
+    key_type: RSA
+    key_length: 4096
+    key_expiry: "3y"  # 3 years — rotate before expiry
+    # Key user ID
+    key_user_id: "Real Vibecode Project <security@real-vibecode.dev>"
+    # Key fingerprint (set after key generation)
+    # key_fingerprint: "XXXX XXXX XXXX XXXX XXXX  XXXX XXXX XXXX XXXX XXXX"
+
+    # Key servers where public key is published
+    key_servers:
+      - "hkps://keys.openpgp.org"
+      - "hkps://keyserver.ubuntu.com"
+      - "hkps://keys.mailvelope.com"
+
+  # ---------------------------------------------------------------------------
+  # Environment variables (set in CI/CD secrets)
+  # ---------------------------------------------------------------------------
+  # GPG_PRIVATE_KEY       — ASCII-armored private key (gpg --export-secret-keys --armor)
+  # GPG_PASSPHRASE        — Key passphrase
+  # GPG_KEY_ID            — Key fingerprint or ID for signing
+  # GPG_TTY               — Set to $(tty) for pinentry (local signing)
+
+  # ---------------------------------------------------------------------------
+  # Signing commands
+  # ---------------------------------------------------------------------------
+  commands:
+    # Import GPG key (CI/CD setup)
+    import_key: >
+      echo "${GPG_PRIVATE_KEY}" | gpg --import --batch --yes
+      echo "${GPG_PASSPHRASE}" | gpg --batch --yes --pinentry-mode loopback \
+        --passphrase-fd 0 --export-secret-keys > /dev/null
+
+    # Sign DEB package with debsign
+    sign_deb: >
+      debsign -k "${GPG_KEY_ID}" "${DEB_PATH}"
+
+    # Sign DEB package with dpkg-sig (alternative)
+    sign_deb_dpkg: >
+      dpkg-sig -k "${GPG_KEY_ID}" \
+        --gpg-options "--batch --pinentry-mode loopback --passphrase ${GPG_PASSPHRASE}" \
+        -s builder "${DEB_PATH}"
+
+    # Sign RPM package
+    sign_rpm: >
+      rpm --addsign \
+        --define "_gpg_name ${GPG_KEY_ID}" \
+        --define "__gpg_sign_cmd %%__gpg_sign_cmd --batch --pinentry-mode loopback --passphrase ${GPG_PASSPHRASE}" \
+        "${RPM_PATH}"
+
+    # Sign APT repository metadata (Release file)
+    sign_apt_repo: >
+      gpg --batch --yes --pinentry-mode loopback \
+        --passphrase "${GPG_PASSPHRASE}" \
+        --local-user "${GPG_KEY_ID}" \
+        -abs -o Release.gpg Release
+      gpg --batch --yes --pinentry-mode loopback \
+        --passphrase "${GPG_PASSPHRASE}" \
+        --local-user "${GPG_KEY_ID}" \
+        --clearsign -o InRelease Release
+
+    # Create detached signature for AppImage
+    sign_appimage: >
+      gpg --batch --yes --pinentry-mode loopback \
+        --passphrase "${GPG_PASSPHRASE}" \
+        --local-user "${GPG_KEY_ID}" \
+        --detach-sign --armor "${APPIMAGE_PATH}"
+
+  # ---------------------------------------------------------------------------
+  # RPM macros (place in ~/.rpmmacros or /etc/rpm/macros)
+  # ---------------------------------------------------------------------------
+  rpm_macros:
+    _gpg_name: "${GPG_KEY_ID}"
+    _gpg_path: "${HOME}/.gnupg"
+    __gpg_sign_cmd: >
+      %%__gpg_sign_cmd --batch --pinentry-mode loopback
+      --passphrase ${GPG_PASSPHRASE}
+
+  # ---------------------------------------------------------------------------
+  # Verification
+  # ---------------------------------------------------------------------------
+  verify:
+    # Verify DEB signature
+    verify_deb: 'debsig-verify "${DEB_PATH}"'
+    # Verify RPM signature
+    verify_rpm: 'rpm --checksig "${RPM_PATH}"'
+    # Verify AppImage signature
+    verify_appimage: 'gpg --verify "${APPIMAGE_PATH}.asc" "${APPIMAGE_PATH}"'
+    # Verify APT repository
+    verify_apt: 'gpg --verify Release.gpg Release'
+
+
+# =============================================================================
+# 4. CI/CD — GitHub Actions Signing Pipeline
+# =============================================================================
+# Reference workflow steps for code signing in GitHub Actions.
+# Secrets must be configured in: Settings → Secrets and variables → Actions
+# =============================================================================
+
+ci_cd:
+  # ---------------------------------------------------------------------------
+  # Required GitHub Secrets
+  # ---------------------------------------------------------------------------
+  secrets:
+    # — Windows —
+    - WIN_CERT_PATH         # .pfx certificate file (or use base64 in CSC_LINK)
+    - WIN_CERT_PASSWORD     # Certificate password
+    # — macOS —
+    - CSC_LINK              # Base64-encoded .p12 certificate
+    - CSC_KEY_PASSWORD      # Certificate password
+    - APPLE_ID              # Apple ID email
+    - APPLE_ID_PASSWORD     # App-specific password
+    - APPLE_TEAM_ID         # Apple Developer team ID
+    # — Linux —
+    - GPG_PRIVATE_KEY       # ASCII-armored GPG private key
+    - GPG_PASSPHRASE        # GPG key passphrase
+    - GPG_KEY_ID            # GPG key fingerprint
+    # — Publishing —
+    - GH_TOKEN              # GitHub token for releases
+
+  # ---------------------------------------------------------------------------
+  # GitHub Actions workflow steps
+  # ---------------------------------------------------------------------------
+  github_actions:
+    # ======================================================================
+    # Windows signing step
+    # ======================================================================
+    windows_sign: |
+      - name: Sign Windows artifacts
+        if: runner.os == 'Windows'
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          # electron-builder handles signing automatically when CSC_LINK is set
+          # The signAndEditExecutable flag in electron-builder.yml controls this
+          npm run package:win
+
+          # Verify all executables are signed
+          Get-ChildItem -Path dist -Recurse -Include *.exe,*.msi | ForEach-Object {
+            $sig = Get-AuthenticodeSignature $_.FullName
+            if ($sig.Status -ne "Valid") {
+              Write-Error "Unsigned artifact: $($_.FullName)"
+              exit 1
+            }
+            Write-Host "✓ Signed: $($_.Name) ($($sig.SignerCertificate.Subject))"
+          }
+
+    # ======================================================================
+    # macOS signing + notarization step
+    # ======================================================================
+    macos_sign: |
+      - name: Sign & notarize macOS artifacts
+        if: runner.os == 'macOS'
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # electron-builder handles codesign + notarization when env vars are set
+          npm run package:mac
+
+          # Verify code signature
+          APP_PATH=$(find dist/mac* -name "*.app" -maxdepth 1 | head -1)
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+
+          # Verify notarization
+          DMG_PATH=$(find dist -name "*.dmg" -maxdepth 1 | head -1)
+          spctl --assess --type execute --verbose=2 "$APP_PATH"
+          stapler check "$DMG_PATH"
+
+    # ======================================================================
+    # Linux GPG signing step
+    # ======================================================================
+    linux_sign: |
+      - name: Import GPG key for Linux signing
+        if: runner.os == 'Linux'
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Import GPG key
+          echo "$GPG_PRIVATE_KEY" | gpg --import --batch --yes
+
+          # Configure GPG for non-interactive use
+          mkdir -p ~/.gnupg
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          chmod 700 ~/.gnupg
+          chmod 600 ~/.gnupg/*
+
+      - name: Build & sign Linux packages
+        if: runner.os == 'Linux'
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Build packages (electron-builder does not GPG-sign automatically)
+          npm run package:linux
+
+          # Sign DEB packages
+          for deb in dist/*.deb; do
+            debsign -k "$GPG_KEY_ID" "$deb"
+            echo "✓ Signed: $deb"
+          done
+
+          # Sign RPM packages
+          for rpm in dist/*.rpm; do
+            rpm --addsign \
+              --define "_gpg_name $GPG_KEY_ID" \
+              --define "__gpg_sign_cmd %{__gpg_sign_cmd} --batch --pinentry-mode loopback" \
+              "$rpm"
+            echo "✓ Signed: $rpm"
+          done
+
+          # Create detached signatures for AppImages
+          for appimage in dist/*.AppImage; do
+            gpg --batch --yes --pinentry-mode loopback \
+              --passphrase "$GPG_PASSPHRASE" \
+              --local-user "$GPG_KEY_ID" \
+              --detach-sign --armor "$appimage"
+            echo "✓ Signed: $appimage"
+          done
+
+    # ======================================================================
+    # Complete release workflow
+    # ======================================================================
+    release_workflow: |
+      name: Release
+
+      on:
+        push:
+          tags: ['v*']
+
+      jobs:
+        build-windows:
+          runs-on: windows-latest
+          steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with: { node-version: 20 }
+            - run: npm ci
+            - run: npm run compile
+            - name: Build & sign Windows
+              env:
+                CSC_LINK: ${{ secrets.CSC_LINK }}
+                CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+              run: npm run package:win
+            - uses: actions/upload-artifact@v4
+              with:
+                name: windows-artifacts
+                path: dist/*.exe
+
+        build-macos:
+          runs-on: macos-latest
+          steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with: { node-version: 20 }
+            - run: npm ci
+            - run: npm run compile
+            - name: Build, sign & notarize macOS
+              env:
+                CSC_LINK: ${{ secrets.CSC_LINK }}
+                CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+                APPLE_ID: ${{ secrets.APPLE_ID }}
+                APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+                APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+              run: npm run package:mac
+            - uses: actions/upload-artifact@v4
+              with:
+                name: macos-artifacts
+                path: |
+                  dist/*.dmg
+                  dist/*.zip
+
+        build-linux:
+          runs-on: ubuntu-latest
+          steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with: { node-version: 20 }
+            - run: npm ci
+            - run: npm run compile
+            - run: npm run package:linux
+            - name: Import GPG key
+              env:
+                GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+              run: echo "$GPG_PRIVATE_KEY" | gpg --import --batch --yes
+            - name: Sign Linux packages
+              env:
+                GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+                GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+              run: |
+                for deb in dist/*.deb; do
+                  debsign -k "$GPG_KEY_ID" "$deb"
+                done
+                for rpm in dist/*.rpm; do
+                  rpm --addsign --define "_gpg_name $GPG_KEY_ID" "$rpm"
+                done
+                for appimage in dist/*.AppImage; do
+                  gpg --batch --yes --pinentry-mode loopback \
+                    --passphrase "$GPG_PASSPHRASE" \
+                    --local-user "$GPG_KEY_ID" \
+                    --detach-sign --armor "$appimage"
+                done
+            - uses: actions/upload-artifact@v4
+              with:
+                name: linux-artifacts
+                path: |
+                  dist/*.AppImage
+                  dist/*.AppImage.asc
+                  dist/*.deb
+                  dist/*.rpm
+
+        publish-release:
+          needs: [build-windows, build-macos, build-linux]
+          runs-on: ubuntu-latest
+          steps:
+            - uses: actions/download-artifact@v4
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                files: '**/*'
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+# =============================================================================
+# 5. Certificates — How to Obtain and Manage
+# =============================================================================
+
+certificates:
+  # ---------------------------------------------------------------------------
+  # Windows — Code Signing Certificate
+  # ---------------------------------------------------------------------------
+  windows:
+    provider: "DigiCert | Sectigo | GlobalSign"
+    type: "EV Code Signing (recommended) or OV Code Signing"
+    validity: "1-3 years"
+    storage: "Hardware token (YubiKey 5) or cloud HSM (Azure Key Vault, DigiCert ONE)"
+    how_to_obtain: |
+      1. Choose a Certificate Authority (CA): DigiCert, Sectigo, or GlobalSign
+      2. Complete organization validation (OV) or extended validation (EV)
+         - Provide business registration documents
+         - Complete CA phone verification
+         - Typical turnaround: 1-5 business days (OV), 3-10 days (EV)
+      3. Receive certificate:
+         - OV: .pfx/.p12 file via email or download
+         - EV: Physical USB token or cloud HSM credentials
+      4. For CI/CD:
+         - Convert .pfx to base64: base64 -i cert.pfx | pbcopy
+         - Store as CSC_LINK secret in GitHub
+         - For EV/cloud HSM: Configure Azure Key Vault or DigiCert ONE
+    rotation: |
+      - Renew at least 30 days before expiry
+      - Update CSC_LINK secret after renewal
+      - Old signatures remain valid (timestamp proves signing date)
+      - SmartScreen reputation does NOT transfer — build it early
+
+  # ---------------------------------------------------------------------------
+  # macOS — Developer ID Certificate
+  # ---------------------------------------------------------------------------
+  macos:
+    provider: "Apple Developer Program"
+    type: "Developer ID Application (for distribution outside App Store)"
+    validity: "5 years (renew annually via Apple Developer Program membership)"
+    storage: "Keychain (macOS) or .p12 file export for CI/CD"
+    how_to_obtain: |
+      1. Enroll in Apple Developer Program ($99/year)
+         - https://developer.apple.com/programs/enroll/
+      2. Generate certificate in Xcode or Developer Portal:
+         - Xcode → Settings → Accounts → Manage Certificates → + → Developer ID Application
+         - Or: https://developer.apple.com/account/resources/certificates/add
+      3. Export as .p12 for CI/CD:
+         - Keychain Access → My Certificates → Right-click → Export
+         - Set a strong password
+         - Convert to base64: base64 -i cert.p12 | pbcopy
+         - Store as CSC_LINK secret in GitHub
+      4. Create app-specific password for notarization:
+         - https://appleid.apple.com → Sign-In and Security → App-Specific Passwords
+         - Store as APPLE_ID_PASSWORD secret
+    rotation: |
+      - Developer ID certs are valid for 5 years
+      - Renew before expiry — new cert, new CSC_LINK
+      - Notarization requires valid cert at time of submission
+      - Already-notarized apps remain valid after cert renewal
+
+  # ---------------------------------------------------------------------------
+  # Linux — GPG Key
+  # ---------------------------------------------------------------------------
+  linux:
+    provider: "Self-generated (OpenPGP)"
+    type: "RSA 4096-bit or Curve 25519"
+    validity: "3 years (configurable)"
+    storage: "GnuPG keyring, exported as ASCII-armored for CI/CD"
+    how_to_obtain: |
+      1. Generate a new GPG key:
+         gpg --full-generate-key
+         - Key type: RSA and RSA (sign only)
+         - Key size: 4096
+         - Expiration: 3y
+         - Real name: Real Vibecode Project
+         - Email: security@real-vibecode.dev
+
+      2. Export the key for CI/CD:
+         # Private key (store as GPG_PRIVATE_KEY secret)
+         gpg --export-secret-keys --armor KEY_ID
+
+         # Public key (publish to keyservers)
+         gpg --export --armor KEY_ID
+
+      3. Publish public key to keyservers:
+         gpg --keyserver hkps://keys.openpgp.org --send-keys KEY_ID
+         gpg --keyserver hkps://keyserver.ubuntu.com --send-keys KEY_ID
+
+      4. Create APT repository trust:
+         # Export public key for APT repo
+         gpg --export --armor KEY_ID > repo-key.asc
+         # Users add with: sudo apt-key add repo-key.asc
+    rotation: |
+      - Generate new key before expiry
+      - Publish new key to keyservers
+      - Update GPG_PRIVATE_KEY and GPG_KEY_ID secrets
+      - Old signatures remain verifiable if old public key is on keyservers
+      - Consider keeping old key until all signed packages are rotated

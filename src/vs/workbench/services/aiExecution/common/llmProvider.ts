@@ -47,6 +47,7 @@ export enum LLMProviderType {
         Ollama = 'ollama',
         LMStudio = 'lm-studio',
         GenericOpenAI = 'generic-openai',
+        Proxima = 'proxima',
 }
 
 /**
@@ -529,17 +530,17 @@ export const KNOWN_PROVIDER_CONFIGS: LLMProviderConfig[] = [
                 apiEndpoint: 'http://localhost:11434/api',
                 apiKeyStorageKey: 'aiExecution.provider.ollama.apiKey',
                 defaultModel: 'llama3',
-                supportedModels: ['llama3', 'llama3:70b', 'codellama', 'mistral', 'phi3', 'qwen2'],
+                supportedModels: ['llama3', 'llama3.1', 'llama3.1:70b', 'llama3:70b', 'codellama', 'mistral', 'mistral-nemo', 'phi3', 'phi3.5', 'qwen2', 'qwen2.5', 'llava', 'llava-llama3', 'gemma2', 'deepseek-coder-v2', 'command-r'],
                 maxContextTokens: 8192,
                 supportsStreaming: true,
-                supportsToolUse: false,
-                supportsVision: false,
+                supportsToolUse: true,
+                supportsVision: true,
                 pricingPerMillionInput: 0,
                 pricingPerMillionOutput: 0,
                 requestsPerMinute: 999,
                 isLocal: true,
-                isPartial: true,
-                partialNotes: 'Requires Ollama daemon running on localhost. Tool use support varies by model. Context window depends on model configuration.',
+                isPartial: false,
+                partialNotes: undefined,
                 timeoutMs: 300000,
                 maxRetries: 1,
         },
@@ -553,16 +554,37 @@ export const KNOWN_PROVIDER_CONFIGS: LLMProviderConfig[] = [
                 supportedModels: ['default'],
                 maxContextTokens: 8192,
                 supportsStreaming: true,
-                supportsToolUse: false,
-                supportsVision: false,
+                supportsToolUse: true,
+                supportsVision: true,
                 pricingPerMillionInput: 0,
                 pricingPerMillionOutput: 0,
                 requestsPerMinute: 999,
                 isLocal: true,
-                isPartial: true,
-                partialNotes: 'Requires LM Studio running with server mode enabled. Uses OpenAI-compatible API format. Models discovered dynamically.',
+                isPartial: false,
+                partialNotes: undefined,
                 timeoutMs: 300000,
                 maxRetries: 1,
+        },
+        {
+                id: 'proxima',
+                type: LLMProviderType.Proxima,
+                displayName: 'Proxima (Built-in)',
+                apiEndpoint: 'http://localhost:3210/v1',
+                apiKeyStorageKey: 'aiExecution.provider.proxima.apiKey',
+                defaultModel: 'proxima-latest',
+                supportedModels: ['proxima-latest', 'proxima-coder', 'proxima-chat', 'proxima-reasoner'],
+                maxContextTokens: 128000,
+                supportsStreaming: true,
+                supportsToolUse: true,
+                supportsVision: true,
+                pricingPerMillionInput: 0,
+                pricingPerMillionOutput: 0,
+                requestsPerMinute: 999,
+                isLocal: true,
+                isPartial: false,
+                partialNotes: undefined,
+                timeoutMs: 300000,
+                maxRetries: 2,
         },
         {
                 id: 'generic-openai',
@@ -606,4 +628,121 @@ export const KNOWN_MODELS: ModelInfo[] = [
         // OpenRouter models (same as above but through OpenRouter)
         { id: 'anthropic/claude-sonnet-4-20250514', providerId: 'openrouter', displayName: 'Claude Sonnet 4 (OpenRouter)', contextWindowTokens: 200000, maxOutputTokens: 8192, supportsStreaming: true, supportsToolUse: true, supportsVision: true, inputPricePerMillion: 3.00, outputPricePerMillion: 15.00, isDeprecated: false, isLocal: false },
         { id: 'openai/gpt-4o', providerId: 'openrouter', displayName: 'GPT-4o (OpenRouter)', contextWindowTokens: 128000, maxOutputTokens: 16384, supportsStreaming: true, supportsToolUse: true, supportsVision: true, inputPricePerMillion: 2.50, outputPricePerMillion: 10.00, isDeprecated: false, isLocal: false },
+        // Ollama models (local, capabilities vary by model)
+        { id: 'llama3', providerId: 'ollama', displayName: 'Llama 3 (8B)', contextWindowTokens: 8192, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: false, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'llama3.1', providerId: 'ollama', displayName: 'Llama 3.1 (8B)', contextWindowTokens: 131072, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'llama3.1:70b', providerId: 'ollama', displayName: 'Llama 3.1 (70B)', contextWindowTokens: 131072, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'llama3:70b', providerId: 'ollama', displayName: 'Llama 3 (70B)', contextWindowTokens: 8192, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: false, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'codellama', providerId: 'ollama', displayName: 'Code Llama', contextWindowTokens: 16384, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: false, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'mistral', providerId: 'ollama', displayName: 'Mistral (7B)', contextWindowTokens: 32768, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'mistral-nemo', providerId: 'ollama', displayName: 'Mistral Nemo (12B)', contextWindowTokens: 131072, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'phi3', providerId: 'ollama', displayName: 'Phi-3 (3.8B)', contextWindowTokens: 8192, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: false, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'phi3.5', providerId: 'ollama', displayName: 'Phi-3.5 (3.8B)', contextWindowTokens: 131072, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'qwen2', providerId: 'ollama', displayName: 'Qwen 2 (7B)', contextWindowTokens: 32768, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'qwen2.5', providerId: 'ollama', displayName: 'Qwen 2.5 (7B)', contextWindowTokens: 131072, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'llava', providerId: 'ollama', displayName: 'LLaVA (Vision)', contextWindowTokens: 4096, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: false, supportsVision: true, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'llava-llama3', providerId: 'ollama', displayName: 'LLaVA Llama 3 (Vision)', contextWindowTokens: 8192, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: false, supportsVision: true, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'gemma2', providerId: 'ollama', displayName: 'Gemma 2 (9B)', contextWindowTokens: 8192, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'deepseek-coder-v2', providerId: 'ollama', displayName: 'DeepSeek Coder V2', contextWindowTokens: 131072, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'command-r', providerId: 'ollama', displayName: 'Command R (35B)', contextWindowTokens: 131072, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        // LM Studio models (dynamically discovered, placeholder entry)
+        { id: 'default', providerId: 'lm-studio', displayName: 'Loaded Model (LM Studio)', contextWindowTokens: 8192, maxOutputTokens: 4096, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        // Proxima models (built-in LLM)
+        { id: 'proxima-latest', providerId: 'proxima', displayName: 'Proxima Latest', contextWindowTokens: 128000, maxOutputTokens: 16384, supportsStreaming: true, supportsToolUse: true, supportsVision: true, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'proxima-coder', providerId: 'proxima', displayName: 'Proxima Coder', contextWindowTokens: 128000, maxOutputTokens: 16384, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'proxima-chat', providerId: 'proxima', displayName: 'Proxima Chat', contextWindowTokens: 128000, maxOutputTokens: 8192, supportsStreaming: true, supportsToolUse: true, supportsVision: true, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
+        { id: 'proxima-reasoner', providerId: 'proxima', displayName: 'Proxima Reasoner', contextWindowTokens: 200000, maxOutputTokens: 32768, supportsStreaming: true, supportsToolUse: true, supportsVision: false, inputPricePerMillion: 0, outputPricePerMillion: 0, isDeprecated: false, isLocal: true },
 ];
+
+// -- Dynamic Model Discovery Interface --
+
+/**
+ * IDynamicModelDiscoveryService -- Runtime model discovery for local providers.
+ *
+ * Queries Ollama's /api/tags and LM Studio's /v1/models endpoints
+ * to dynamically discover available models at runtime, rather than
+ * relying on hardcoded model lists.
+ */
+export const IDynamicModelDiscoveryService = createDecorator<IDynamicModelDiscoveryService>('dynamicModelDiscoveryService');
+
+export interface DiscoveredModel {
+        readonly id: string;
+        readonly name: string;
+        readonly providerId: string;
+        readonly size?: number;            // Model size in bytes
+        readonly quantization?: string;    // e.g. "Q4_0", "Q8_0"
+        readonly family?: string;          // e.g. "llama", "mistral"
+        readonly parameterSize?: string;   // e.g. "7B", "70B"
+        readonly contextLength?: number;   // Context window if reported
+        readonly capabilities: {
+                readonly supportsToolUse: boolean;
+                readonly supportsVision: boolean;
+                readonly supportsStreaming: boolean;
+        };
+}
+
+export interface IDynamicModelDiscoveryService {
+        readonly _serviceBrand: undefined;
+
+        /**
+         * Discover models available on the Ollama daemon.
+         * Calls GET /api/tags on the Ollama endpoint.
+         * Returns empty array if Ollama is not running.
+         */
+        discoverOllamaModels(): Promise<DiscoveredModel[]>;
+
+        /**
+         * Discover models available on the LM Studio server.
+         * Calls GET /v1/models on the LM Studio endpoint.
+         * Returns empty array if LM Studio is not running.
+         */
+        discoverLMStudioModels(): Promise<DiscoveredModel[]>;
+
+        /**
+         * Discover models available on the Proxima server.
+         * Calls GET /v1/models on the Proxima endpoint.
+         * Returns empty array if Proxima is not running.
+         */
+        discoverProximaModels(): Promise<DiscoveredModel[]>;
+
+        /**
+         * Discover models for all local providers.
+         * Updates the model registry with discovered models.
+         */
+        discoverAllLocalModels(): Promise<Map<string, DiscoveredModel[]>>;
+
+        /**
+         * Check if a local provider endpoint is reachable.
+         */
+        isEndpointReachable(endpoint: string): Promise<boolean>;
+}
+
+/**
+ * Ollama model families that support tool/function calling.
+ * Based on Ollama's documentation: https://ollama.com/blog/tool-support
+ */
+export const OLLAMA_TOOL_CAPABLE_FAMILIES = new Set([
+        'llama3.1', 'llama3.2', 'llama3.3', 'llama4',
+        'mistral', 'mistral-nemo', 'mixtral',
+        'qwen2', 'qwen2.5', 'qwen3',
+        'command-r', 'command-r-plus',
+        'phi3.5', 'phi4',
+        'gemma2', 'gemma3',
+        'deepseek-coder', 'deepseek-r1',
+        'dolphin-mistral', 'dolphin-llama3',
+        'firefunction-v2',
+        'herrglaube',
+        'nuextract',
+]);
+
+/**
+ * Ollama model families that support vision/multimodal input.
+ */
+export const OLLAMA_VISION_CAPABLE_FAMILIES = new Set([
+        'llava', 'llava-llama3', 'llava-phi3',
+        'llama3.2-vision', 'minicpm-v',
+        'moondream', 'moondream2',
+        'bakllava',
+        'fuyu',
+        'proxima-latest', 'proxima-chat',
+]);
