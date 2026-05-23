@@ -46,9 +46,6 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install Yarn
-        run: npm install -g yarn
-
       - name: Cache VS Code source
         uses: actions/cache@v4
         with:
@@ -72,17 +69,17 @@ jobs:
         shell: bash
 
       - name: Install project dependencies
-        run: yarn install --ignore-scripts
+        run: npm install --ignore-scripts
         shell: bash
         working-directory: .
 
       - name: Install VS Code dependencies
-        run: yarn install --network-timeout 600000
+        run: npm install --network-timeout 600000
         shell: bash
         working-directory: vscode-source
 
       - name: Compile VS Code source
-        run: yarn compile 2>&1 | tail -30
+        run: npm run compile 2>&1 | tail -30
         shell: bash
         working-directory: vscode-source
 
@@ -128,7 +125,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  # ─── macOS ───────────────────────────────────────────────────────────────────
+  # ─── macOS ────────────────────────────────────────────────────────────────
   build-macos:
     if: github.event.inputs.platform == 'mac' || github.event.inputs.platform == 'all' || startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-14
@@ -146,9 +143,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-
-      - name: Install Yarn
-        run: npm install -g yarn
 
       - name: Cache VS Code source
         uses: actions/cache@v4
@@ -173,16 +167,16 @@ jobs:
         shell: bash
 
       - name: Install project dependencies
-        run: yarn install --ignore-scripts
+        run: npm install --ignore-scripts
         shell: bash
 
       - name: Install VS Code dependencies
-        run: yarn install --network-timeout 600000
+        run: npm install --network-timeout 600000
         shell: bash
         working-directory: vscode-source
 
       - name: Compile VS Code source
-        run: yarn compile 2>&1 | tail -30
+        run: npm run compile 2>&1 | tail -30
         shell: bash
         working-directory: vscode-source
 
@@ -232,7 +226,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  # ─── Linux ───────────────────────────────────────────────────────────────────
+  # ─── Linux ────────────────────────────────────────────────────────────────
   build-linux:
     if: github.event.inputs.platform == 'linux' || github.event.inputs.platform == 'all' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-22.04
@@ -250,9 +244,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-
-      - name: Install Yarn
-        run: npm install -g yarn
 
       - name: Install Linux build dependencies
         run: |
@@ -282,16 +273,16 @@ jobs:
         shell: bash
 
       - name: Install project dependencies
-        run: yarn install --ignore-scripts
+        run: npm install --ignore-scripts
         shell: bash
 
       - name: Install VS Code dependencies
-        run: yarn install --network-timeout 600000
+        run: npm install --network-timeout 600000
         shell: bash
         working-directory: vscode-source
 
       - name: Compile VS Code source
-        run: yarn compile 2>&1 | tail -30
+        run: npm run compile 2>&1 | tail -30
         shell: bash
         working-directory: vscode-source
 
@@ -337,7 +328,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  # ─── Release ──────────────────────────────────────────────────────────────────
+  # ─── Release ──────────────────────────────────────────────────────────────
   release:
     needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest

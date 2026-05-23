@@ -303,38 +303,22 @@ compile_source() {
 
     cd "${vscode_source}"
 
-    # VS Code uses yarn for its build pipeline
-    if command -v yarn &>/dev/null; then
-        log_info "Compiling with yarn..."
-        
-        # Step 1: Ensure dependencies are fully installed (including lifecycle scripts)
-        log_info "Installing dependencies with yarn..."
-        yarn install --network-timeout 600000 2>&1 | tail -10
-        
-        # Step 2: Compile the core
-        log_info "Running yarn compile..."
-        if [[ "${VERBOSE}" == true ]]; then
-            yarn compile
-        else
-            yarn compile 2>&1 | tail -20
-        fi
-        
-        # Step 3: Build the electron app
-        log_info "Running yarn electron..."
-        yarn electron 2>&1 | tail -5 || true
+    # VS Code 1.121.0+ requires npm (yarn is no longer supported)
+    # Step 1: Ensure dependencies are fully installed
+    log_info "Installing dependencies with npm..."
+    npm install --network-timeout 600000 2>&1 | tail -10
+    
+    # Step 2: Compile the core
+    log_info "Running npm run compile..."
+    if [[ "${VERBOSE}" == true ]]; then
+        npm run compile
     else
-        log_info "Compiling with npm..."
-        
-        # Try npm scripts
-        if npm run compile &>/dev/null 2>&1; then
-            npm run compile 2>&1 | tail -20
-        elif [[ -f "gulpfile.js" ]]; then
-            npx gulp compile 2>&1 | tail -20
-        else
-            log_error "Cannot find compilation method. Install yarn: npm install -g yarn"
-            exit 1
-        fi
+        npm run compile 2>&1 | tail -20
     fi
+    
+    # Step 3: Build the electron app
+    log_info "Running npm run electron..."
+    npm run electron 2>&1 | tail -5 || true
 
     # Verify compilation output
     if [[ -d "out" ]]; then
