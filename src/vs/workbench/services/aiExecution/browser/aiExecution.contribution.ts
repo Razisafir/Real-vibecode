@@ -147,6 +147,11 @@ import './executionProgressContribution.js';
 // Wraps AI service calls with error recovery, notifications, and graceful degradation
 import './aiServiceErrorHandler.js';
 
+// ---- Git AI Contribution ----
+// AI-driven git operations: AI Commit, AI Branch, AI PR
+// Uses IGitWorkflowService, IRepositoryIntelligenceService, and ILLMProviderService
+import './gitAIContribution.js';
+
 // =====================================================================
 // SINGLETON REGISTRATIONS
 // 28 core singletons + 3 re-registered + 1 auto-registered workbench contribution
