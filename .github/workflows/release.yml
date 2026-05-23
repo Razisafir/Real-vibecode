@@ -27,7 +27,7 @@ env:
   VSCODE_VERSION: ${{ github.event.inputs.version || '1.121.0' }}
 
 jobs:
-  # ─── Windows ────────────────────────────────────────────────────────────────
+  # ─── Windows ──────────────────────────────────────────────────────────────
   build-windows:
     if: github.event.inputs.platform == 'win' || github.event.inputs.platform == 'all' || startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-2022
@@ -39,7 +39,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -127,7 +127,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  # ─── macOS ──────────────────────────────────────────────────────────────────
+  # ─── macOS ───────────────────────────────────────────────────────────────────
   build-macos:
     if: github.event.inputs.platform == 'mac' || github.event.inputs.platform == 'all' || startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-14
@@ -139,7 +139,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -230,7 +230,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  # ─── Linux ──────────────────────────────────────────────────────────────────
+  # ─── Linux ───────────────────────────────────────────────────────────────────
   build-linux:
     if: github.event.inputs.platform == 'linux' || github.event.inputs.platform == 'all' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-22.04
@@ -242,7 +242,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -334,7 +334,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  # ─── Release ────────────────────────────────────────────────────────────────
+  # ─── Release ──────────────────────────────────────────────────────────────────
   release:
     needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
