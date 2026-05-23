@@ -1,11 +1,12 @@
 {
-  "name": "real-vibecode-dev",
+  "name": "real-vibecode",
   "version": "1.121.0",
   "distro": "9897f32f1899b7b2c8e5d0701c5d99458bb8de9e",
   "author": {
     "name": "Real Vibecode Project"
   },
-  "license": "MIT",
+  "license": "UNLICENSED",
+  "description": "AI-native IDE built on VS Code with multi-provider LLM support and autonomous execution",
   "main": "./out/main.js",
   "type": "module",
   "private": true,
@@ -15,5 +16,21 @@
   },
   "bugs": {
     "url": "https://github.com/Razisafir/Real-vibecode/issues"
+  },
+  "scripts": {
+    "build:desktop": "bash scripts/build-desktop.sh",
+    "build:desktop:win": "bash scripts/build-desktop.sh --platform win",
+    "build:desktop:mac": "bash scripts/build-desktop.sh --platform mac",
+    "build:desktop:linux": "bash scripts/build-desktop.sh --platform linux",
+    "build:desktop:all": "bash scripts/build-desktop.sh --platform all",
+    "build:desktop:clean": "bash scripts/build-desktop.sh --clean",
+    "package": "npx electron-builder",
+    "package:win": "npx electron-builder --win",
+    "package:mac": "npx electron-builder --mac",
+    "package:linux": "npx electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
   }
 }

@@ -1,0 +1,23 @@
+Real Vibecode License
+=====================
+
+This software is free to use for personal and commercial purposes.
+
+The VS Code base is licensed under the MIT License by Microsoft Corporation.
+See https://github.com/microsoft/vscode for the original VS Code license terms.
+
+The AI execution kernel and Vibecode-specific modifications are proprietary
+to the Real Vibecode Project.
+
+You may use this software for personal and commercial purposes.
+
+Distribution of modified versions of this software requires explicit written
+permission from the Real Vibecode Project.
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
