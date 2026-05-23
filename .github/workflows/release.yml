@@ -72,13 +72,16 @@ jobs:
         shell: bash
 
       - name: Install project dependencies
-        run: yarn install --frozen-lockfile || yarn install
+        run: yarn install --ignore-scripts
         shell: bash
         working-directory: .
 
       - name: Compile VS Code source
         run: |
           cd vscode-source
+          echo "Running postinstall scripts (downloads Electron, etc.)..."
+          yarn postinstall 2>&1 | tail -20 || true
+          echo "Compiling VS Code..."
           yarn compile 2>&1 | tail -30
         shell: bash
 
@@ -169,12 +172,15 @@ jobs:
         shell: bash
 
       - name: Install project dependencies
-        run: yarn install --frozen-lockfile || yarn install
+        run: yarn install --ignore-scripts
         shell: bash
 
       - name: Compile VS Code source
         run: |
           cd vscode-source
+          echo "Running postinstall scripts (downloads Electron, etc.)..."
+          yarn postinstall 2>&1 | tail -20 || true
+          echo "Compiling VS Code..."
           yarn compile 2>&1 | tail -30
         shell: bash
 
@@ -274,12 +280,15 @@ jobs:
         shell: bash
 
       - name: Install project dependencies
-        run: yarn install --frozen-lockfile || yarn install
+        run: yarn install --ignore-scripts
         shell: bash
 
       - name: Compile VS Code source
         run: |
           cd vscode-source
+          echo "Running postinstall scripts (downloads Electron, etc.)..."
+          yarn postinstall 2>&1 | tail -20 || true
+          echo "Compiling VS Code..."
           yarn compile 2>&1 | tail -30
         shell: bash
 
