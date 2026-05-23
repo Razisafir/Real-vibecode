@@ -307,7 +307,11 @@ compile_source() {
     if command -v yarn &>/dev/null; then
         log_info "Compiling with yarn..."
         
-        # Step 1: Compile the core
+        # Step 1: Run postinstall scripts (download Electron, etc.)
+        log_info "Running postinstall scripts..."
+        yarn postinstall 2>&1 | tail -10 || true
+        
+        # Step 2: Compile the core
         log_info "Running yarn compile..."
         if [[ "${VERBOSE}" == true ]]; then
             yarn compile
