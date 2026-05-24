@@ -7,36 +7,92 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to build (e.g. 1.121.1)'
+        description: 'VS Code version to build from (e.g. 1.121.1)'
         required: false
-        default: ''
+        default: '1.121.1'
 
 permissions:
   contents: write
+
+env:
+  VSCODE_VERSION: ${{ github.event.inputs.version || '1.121.1' }}
+  VIBECODE_VERSION: ${{ github.event.inputs.version || '1.121.1' }}
 
 jobs:
   build-windows:
     name: Build Windows
     runs-on: windows-latest
     steps:
-      - name: Checkout
+      - name: Checkout VibeCode branding
         uses: actions/checkout@v4
+        with:
+          path: vibecode
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Yarn
+        run: npm install -g yarn
+
+      - name: Clone VS Code source
+        run: |
+          git clone --depth 1 --branch $env:VSCODE_VERSION https://github.com/microsoft/vscode.git vscode-src
+          cd vscode-src
+          git log --oneline -1
+
+      - name: Apply VibeCode branding
+        run: |
+          # Copy branded product.json
+          Copy-Item -Path "vibecode/product.json" -Destination "vscode-src/product.json" -Force
+
+          # Copy electron-builder config
+          Copy-Item -Path "vibecode/electron-builder.yml" -Destination "vscode-src/electron-builder.yml" -Force
+
+          # Copy Windows icon
+          if (Test-Path "vibecode/resources/win32/code.ico") {
+            Copy-Item -Path "vibecode/resources/win32/code.ico" -Destination "vscode-src/resources/win32/code.ico" -Force
+          }
+
+          # Copy NSIS installer customizations
+          if (Test-Path "vibecode/build/win32/installer.nsh") {
+            New-Item -ItemType Directory -Path "vscode-src/build/win32" -Force
+            Copy-Item -Path "vibecode/build/win32/installer.nsh" -Destination "vscode-src/build/win32/installer.nsh" -Force
+          }
+
+          # Copy macOS entitlements
+          if (Test-Path "vibecode/build/darwin/entitlements.mac.plist") {
+            New-Item -ItemType Directory -Path "vscode-src/build/darwin" -Force
+            Copy-Item -Path "vibecode/build/darwin/entitlements.mac.plist" -Destination "vscode-src/build/darwin/entitlements.mac.plist" -Force
+          }
+
+          # Copy Linux post-install scripts
+          if (Test-Path "vibecode/build/linux") {
+            New-Item -ItemType Directory -Path "vscode-src/build/linux" -Force
+            Copy-Item -Path "vibecode/build/linux/*" -Destination "vscode-src/build/linux/" -Force
+          }
+
+          Write-Host "VibeCode branding applied successfully"
+
+      - name: Install VS Code dependencies
+        working-directory: vscode-src
+        run: yarn
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
-      - name: Compile
-        run: npm run compile
+      - name: Compile VS Code
+        working-directory: vscode-src
+        run: yarn compile
 
-      - name: Build Windows x64 Setup
+      - name: Build Windows x64 with electron-builder
+        working-directory: vscode-src
         run: npx electron-builder --win --x64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -45,66 +101,138 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: dist/*.exe
+          path: vscode-src/dist/*.exe
           retention-days: 30
 
   build-mac:
     name: Build macOS
     runs-on: macos-latest
     steps:
-      - name: Checkout
+      - name: Checkout VibeCode branding
         uses: actions/checkout@v4
+        with:
+          path: vibecode
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Yarn
+        run: npm install -g yarn
+
+      - name: Clone VS Code source
+        run: |
+          git clone --depth 1 --branch $VSCODE_VERSION https://github.com/microsoft/vscode.git vscode-src
+          cd vscode-src
+          git log --oneline -1
+
+      - name: Apply VibeCode branding
+        run: |
+          cp vibecode/product.json vscode-src/product.json
+          cp vibecode/electron-builder.yml vscode-src/electron-builder.yml
+
+          # Copy macOS icon and entitlements
+          if [ -d "vibecode/resources/darwin" ]; then
+            cp -r vibecode/resources/darwin/* vscode-src/resources/darwin/ 2>/dev/null || true
+          fi
+          if [ -f "vibecode/build/darwin/entitlements.mac.plist" ]; then
+            mkdir -p vscode-src/build/darwin
+            cp vibecode/build/darwin/entitlements.mac.plist vscode-src/build/darwin/
+          fi
+
+      - name: Install VS Code dependencies
+        working-directory: vscode-src
+        run: yarn
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
-      - name: Compile
-        run: npm run compile
+      - name: Compile VS Code
+        working-directory: vscode-src
+        run: yarn compile
 
-      - name: Build macOS DMG
+      - name: Build macOS DMG with electron-builder
+        working-directory: vscode-src
         run: npx electron-builder --mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos
           path: |
-            dist/*.dmg
-            dist/*.zip
+            vscode-src/dist/*.dmg
+            vscode-src/dist/*.zip
           retention-days: 30
 
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout VibeCode branding
         uses: actions/checkout@v4
+        with:
+          path: vibecode
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxkbfile-dev libsecret-1-0 libkrb5-dev
+
+      - name: Setup Yarn
+        run: npm install -g yarn
+
+      - name: Clone VS Code source
+        run: |
+          git clone --depth 1 --branch $VSCODE_VERSION https://github.com/microsoft/vscode.git vscode-src
+          cd vscode-src
+          git log --oneline -1
+
+      - name: Apply VibeCode branding
+        run: |
+          cp vibecode/product.json vscode-src/product.json
+          cp vibecode/electron-builder.yml vscode-src/electron-builder.yml
+
+          # Copy Linux icons and scripts
+          if [ -d "vibecode/resources/linux" ]; then
+            cp -r vibecode/resources/linux/* vscode-src/resources/linux/ 2>/dev/null || true
+          fi
+          if [ -d "vibecode/build/linux" ]; then
+            mkdir -p vscode-src/build/linux
+            cp -r vibecode/build/linux/* vscode-src/build/linux/ 2>/dev/null || true
+          fi
+
+      - name: Install VS Code dependencies
+        working-directory: vscode-src
+        run: yarn
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
-      - name: Compile
-        run: npm run compile
+      - name: Compile VS Code
+        working-directory: vscode-src
+        run: yarn compile
 
-      - name: Build Linux AppImage + DEB + RPM
+      - name: Build Linux packages with electron-builder
+        working-directory: vscode-src
         run: npx electron-builder --linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -114,15 +242,15 @@ jobs:
         with:
           name: linux
           path: |
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.rpm
+            vscode-src/dist/*.AppImage
+            vscode-src/dist/*.deb
+            vscode-src/dist/*.rpm
           retention-days: 30
 
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-windows]
+    needs: [build-windows, build-mac, build-linux]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout
