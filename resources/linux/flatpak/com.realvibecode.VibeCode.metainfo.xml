@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ======================================================================== -->
+<!-- Real Vibecode — AppStream Metadata for Flathub                           -->
+<!-- ======================================================================== -->
+<!-- Validates with: appstream-util validate <file>                           -->
+<!-- Docs: https://www.freedesktop.org/software/appstream/docs/               -->
+<!--        https://github.com/flathub/flathub/wiki/App-Requirements          -->
+<!-- ======================================================================== -->
+<component type="desktop-application">
+  <id>com.realvibecode.VibeCode</id>
+
+  <!-- =========================================================================
+       Naming — must match the .desktop file basename
+       ========================================================================= -->
+  <name>Real Vibecode</name>
+  <summary>AI-Native Code Editing. Redefined.</summary>
+  <developer_name>Real Vibecode Project</developer_name>
+  <project_group>Real Vibecode</project_group>
+
+  <!-- =========================================================================
+       Licensing
+       ========================================================================= -->
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <!-- =========================================================================
+       URLs
+       ========================================================================= -->
+  <url type="homepage">https://github.com/Razisafir/Real-vibecode</url>
+  <url type="bugtracker">https://github.com/Razisafir/Real-vibecode/issues</url>
+  <url type="help">https://github.com/Razisafir/Real-vibecode/discussions</url>
+  <url type="vcs-browser">https://github.com/Razisafir/Real-vibecode</url>
+  <url type="donation">https://github.com/sponsors/Razisafir</url>
+  <url type="contact">https://github.com/Razisafir/Real-vibecode/issues</url>
+
+  <!-- =========================================================================
+       Description — plain <p> paragraphs; no markup beyond <em>, <code>, <ul>/<li>
+       ========================================================================= -->
+  <description>
+    <p>
+      Real Vibecode is an AI-native IDE built on a forked architecture, combining
+      the power of an AI execution kernel with a proven code editor foundation.
+    </p>
+    <p>
+      It provides an authoritative mutation control layer and a causal execution
+      graph engine for transparent, auditable AI-driven development. Every AI
+      action is tracked, replayable, and reversible — giving developers full
+      control over autonomous coding workflows.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>AI Execution Kernel with autonomous code editing and multi-agent orchestration</li>
+      <li>Causal Execution Graph for full traceability and replay of AI actions</li>
+      <li>Transactional Edit System with rollback and verification</li>
+      <li>Repository Intelligence with codebase-aware context optimization</li>
+      <li>Terminal Integration with AI-assisted command safety</li>
+      <li>Cost Governor for managing AI provider token usage</li>
+      <li>Built-in LLM provider support with streaming output</li>
+      <li>MCP (Model Context Protocol) integration for extensible AI tooling</li>
+      <li>Rich extension ecosystem compatible with VS Code extensions</li>
+      <li>Integrated terminal, debugger, and Git workflow support</li>
+    </ul>
+  </description>
+
+  <!-- =========================================================================
+       Desktop integration — references the .desktop file
+       ========================================================================= -->
+  <launchable type="desktop-id">com.realvibecode.VibeCode.desktop</launchable>
+
+  <!-- =========================================================================
+       Categories (Flathub requires at least one)
+       ========================================================================= -->
+  <categories>
+    <category>Development</category>
+    <category>IDE</category>
+    <category>TextEditor</category>
+  </categories>
+
+  <!-- =========================================================================
+       Keywords for software center search
+       ========================================================================= -->
+  <keywords>
+    <keyword>ide</keyword>
+    <keyword>editor</keyword>
+    <keyword>code</keyword>
+    <keyword>development</keyword>
+    <keyword>ai</keyword>
+    <keyword>vibecode</keyword>
+    <keyword>text</keyword>
+    <keyword>programming</keyword>
+    <keyword>coding</keyword>
+    <keyword>autonomous</keyword>
+  </keywords>
+
+  <!-- =========================================================================
+       Screenshots — at least one screenshot required by Flathub
+       ========================================================================= -->
+  <screenshots>
+    <screenshot type="default">
+      <caption>Real Vibecode editing with AI execution kernel integration</caption>
+      <caption xml:lang="de">Real Vibecode mit KI-Ausführungskernel-Integration</caption>
+      <caption xml:lang="es">Real Vibecode con integración del kernel de ejecución de IA</caption>
+      <caption xml:lang="fr">Real Vibecode avec intégration du noyau d'exécution IA</caption>
+      <caption xml:lang="ja">AI実行カーネル統合によるReal Vibecodeの編集</caption>
+      <caption xml:lang="zh_CN">Real Vibecode AI 执行内核集成编辑</caption>
+      <image type="source" width="1920" height="1080">https://github.com/Razisafir/Real-vibecode/raw/main/docs/assets/screenshot.png</image>
+      <image type="thumbnail" width="1280" height="720">https://github.com/Razisafir/Real-vibecode/raw/main/docs/assets/screenshot-720.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Multi-agent orchestration panel with execution graph visualization</caption>
+      <image type="source" width="1920" height="1080">https://github.com/Razisafir/Real-vibecode/raw/main/docs/assets/screenshot-agents.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Terminal integration with AI command safety and streaming output</caption>
+      <image type="source" width="1920" height="1080">https://github.com/Razisafir/Real-vibecode/raw/main/docs/assets/screenshot-terminal.png</image>
+    </screenshot>
+  </screenshots>
+
+  <!-- =========================================================================
+       MIME types handled
+       ========================================================================= -->
+  <provides>
+    <mediatype>application/x-real-vibecode-workspace</mediatype>
+    <mediatype>application/x-vibecode</mediatype>
+    <binary>real-vibecode</binary>
+  </provides>
+
+  <!-- =========================================================================
+       Supported protocols
+       ========================================================================= -->
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+
+  <!-- =========================================================================
+       Content rating (for Flathub policy compliance)
+       ========================================================================= -->
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-cartoon">none</content_attribute>
+    <content_attribute id="violence-fantasy">none</content_attribute>
+    <content_attribute id="violence-realistic">none</content_attribute>
+    <content_attribute id="violence-bloodshed">none</content_attribute>
+    <content_attribute id="violence-sexual">none</content_attribute>
+    <content_attribute id="violence-desecration">none</content_attribute>
+    <content_attribute id="violence-slavery">none</content_attribute>
+    <content_attribute id="violence-worship">none</content_attribute>
+    <content_attribute id="drugs-alcohol">none</content_attribute>
+    <content_attribute id="drugs-narcotics">none</content_attribute>
+    <content_attribute id="drugs-tobacco">none</content_attribute>
+    <content_attribute id="sex-nudity">none</content_attribute>
+    <content_attribute id="sex-themes">none</content_attribute>
+    <content_attribute id="sex-homosexuality">none</content_attribute>
+    <content_attribute id="sex-prostitution">none</content_attribute>
+    <content_attribute id="sex-adultery">none</content_attribute>
+    <content_attribute id="sex-appearance">none</content_attribute>
+    <content_attribute id="language-profanity">none</content_attribute>
+    <content_attribute id="language-humor">none</content_attribute>
+    <content_attribute id="language-discrimination">none</content_attribute>
+    <content_attribute id="social-chat">intense</content_attribute>
+    <content_attribute id="social-info">intense</content_attribute>
+    <content_attribute id="social-audio">none</content_attribute>
+    <content_attribute id="social-location">none</content_attribute>
+    <content_attribute id="social-contacts">none</content_attribute>
+    <content_attribute id="money-purchasing">none</content_attribute>
+    <content_attribute id="money-gambling">none</content_attribute>
+  </content_rating>
+
+  <!-- =========================================================================
+       Release history — most recent first
+       ========================================================================= -->
+  <releases>
+    <release version="1.121.0" date="2025-03-04" type="stable">
+      <description>
+        <p>Initial Flatpak release of Real Vibecode.</p>
+        <ul>
+          <li>AI Execution Kernel with autonomous code editing</li>
+          <li>Multi-agent orchestration with causal execution graph</li>
+          <li>Transactional edit system with rollback</li>
+          <li>Terminal integration with AI command safety</li>
+          <li>MCP (Model Context Protocol) support</li>
+          <li>VS Code extension compatibility</li>
+        </ul>
+      </description>
+      <url type="details">https://github.com/Razisafir/Real-vibecode/releases/tag/v1.121.0</url>
+    </release>
+  </releases>
+
+  <!-- =========================================================================
+       Update contact — required by Flathub for submission
+       ========================================================================= -->
+  <update_contact>real-vibecode@github.com</update_contact>
+
+  <!-- =========================================================================
+       Custom metadata
+       ========================================================================= -->
+  <custom>
+    <value key="flathub::manifest">com.realvibecode.VibeCode.yml</value>
+  </custom>
+</component>
