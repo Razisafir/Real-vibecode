@@ -1,9 +1,9 @@
 {
-  "name": "real-vibecode-dev",
+  "name": "vibecode-dev",
   "version": "1.121.0",
   "distro": "9897f32f1899b7b2c8e5d0701c5d99458bb8de9e",
   "author": {
-    "name": "Real Vibecode Project"
+    "name": "VibeCode Project"
   },
   "license": "MIT",
   "main": "./out/main.js",
@@ -15,5 +15,8 @@
   },
   "bugs": {
     "url": "https://github.com/Razisafir/Real-vibecode/issues"
+  },
+  "dependencies": {
+    "vscode-web": "^1.91.1"
   }
 }

@@ -69,6 +69,9 @@ import { IAutonomousExecutionLoopService, LoopState } from '../common/autonomous
 import { ITerminalExecutionBridgeService } from '../common/terminalExecutionBridge.js';
 import { ExecutionEvent } from '../common/executionEvents.js';
 
+// MCP Server service imports
+import { IMCPServerService, MCPServerState } from '../common/mcpServerService.js';
+
 // Webview HTML content
 import { getAIWorkflowHTML } from './aiWorkflowContent.js';
 
@@ -80,6 +83,7 @@ const AI_VIEW_CONTAINER_ID = 'aiExecution';
 const AI_WORKFLOW_VIEW_ID = 'aiExecution.workflow';
 const AI_PROJECTS_VIEW_ID = 'aiExecution.projects';
 const AI_TIMELINE_VIEW_ID = 'aiExecution.timeline';
+const AI_MCP_VIEW_ID = 'aiExecution.mcpServers';
 
 const STORAGE_KEY_PROJECT = 'aiExecution.currentProject';
 const STORAGE_KEY_STEP = 'aiExecution.currentStep';
@@ -107,6 +111,12 @@ const aiTimelineIcon = registerIcon(
         'ai-timeline-icon',
         Codicon.history,
         'AI Timeline view icon'
+);
+
+const aiMCPIcon = registerIcon(
+        'ai-mcp-icon',
+        Codicon.server,
+        'AI MCP Servers view icon'
 );
 
 // =====================================================================================
@@ -164,6 +174,17 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([
                 canToggleVisibility: true,
                 ctorDescriptor: new SyncDescriptor(
                         class AITimelineViewPane {
+                                constructor() { /* resolved by webviewViewService */ }
+                        }
+                ),
+        },
+        {
+                id: AI_MCP_VIEW_ID,
+                name: { value: 'MCP Servers', original: 'MCP Servers' },
+                containerIcon: aiMCPIcon,
+                canToggleVisibility: true,
+                ctorDescriptor: new SyncDescriptor(
+                        class AIMCPViewPane {
                                 constructor() { /* resolved by webviewViewService */ }
                         }
                 ),
@@ -360,6 +381,27 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
                         type: 'boolean',
                         default: true,
                         description: 'Automatically offer to restore from crash recovery state on startup',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.mcp.autoStart': {
+                        type: 'boolean',
+                        default: false,
+                        description: 'Automatically start MCP servers that are configured for auto-start',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.mcp.defaultTransport': {
+                        type: 'string',
+                        enum: ['stdio', 'sse', 'streamable-http'],
+                        default: 'stdio',
+                        description: 'Default transport type for new MCP server configurations',
+                        scope: ConfigurationScope.APPLICATION,
+                },
+                'aiExecution.mcp.serverTimeout': {
+                        type: 'number',
+                        default: 30000,
+                        minimum: 5000,
+                        maximum: 120000,
+                        description: 'Default timeout for MCP server operations in milliseconds',
                         scope: ConfigurationScope.APPLICATION,
                 },
         },
@@ -578,6 +620,8 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                 // Phase 28 services
                 @IAutonomousExecutionLoopService private readonly executionLoopService: IAutonomousExecutionLoopService,
                 @ITerminalExecutionBridgeService private readonly terminalBridgeService: ITerminalExecutionBridgeService,
+                // MCP Server service
+                @IMCPServerService private readonly mcpServerService: IMCPServerService,
         ) {
                 super();
 
@@ -668,6 +712,17 @@ export class AIProductContribution extends Disposable implements IWorkbenchContr
                         resolve: async (webviewView: WebviewView, token: CancellationToken) => {
                                 webviewView.webview.options = { enableScripts: true, localResourceRoots: [] };
                                 webviewView.webview.html = this.getTimelineHTML();
+                        },
+                });
+
+                // Register the MCP Servers view resolver
+                this.webviewViewService.register(AI_MCP_VIEW_ID, {
+                        resolve: async (webviewView: WebviewView, token: CancellationToken) => {
+                                webviewView.webview.options = { enableScripts: true, localResourceRoots: [] };
+                                webviewView.webview.html = this.getMCPServersHTML();
+                                webviewView.webview.onDidReceiveMessage((msg: { type: string; [key: string]: any }) => {
+                                        this.handleMCPMessage(msg);
+                                });
                         },
                 });
         }
@@ -1490,6 +1545,106 @@ body { font-family: var(--vscode-font-family); margin: 0; padding: 0; background
 <html><head><meta charset="UTF-8"><style>
 body { font-family: var(--vscode-font-family); margin: 0; padding: 8px; background: var(--vscode-sideBar-background); color: var(--vscode-foreground); }
 </style></head><body>${timeline}</body></html>`;
+        }
+
+        // =================================================================================
+        // MCP SERVERS VIEW
+        // =================================================================================
+
+        private handleMCPMessage(msg: { type: string; [key: string]: any }): void {
+                switch (msg.type) {
+                        case 'startServer': {
+                                this.mcpServerService.startServer(msg.serverId).catch(err => {
+                                        this.logService.error(`[AIProduct] MCP start failed: ${err}`);
+                                });
+                                break;
+                        }
+                        case 'stopServer': {
+                                this.mcpServerService.stopServer(msg.serverId).catch(err => {
+                                        this.logService.error(`[AIProduct] MCP stop failed: ${err}`);
+                                });
+                                break;
+                        }
+                        case 'restartServer': {
+                                this.mcpServerService.restartServer(msg.serverId).catch(err => {
+                                        this.logService.error(`[AIProduct] MCP restart failed: ${err}`);
+                                });
+                                break;
+                        }
+                        case 'addServer': {
+                                this.mcpServerService.addServer(msg.config);
+                                break;
+                        }
+                        case 'removeServer': {
+                                this.mcpServerService.removeServer(msg.serverId).catch(err => {
+                                        this.logService.error(`[AIProduct] MCP remove failed: ${err}`);
+                                });
+                                break;
+                        }
+                        case 'toggleServer': {
+                                this.mcpServerService.setServerEnabled(msg.serverId, msg.enabled);
+                                break;
+                        }
+                        case 'callTool': {
+                                this.mcpServerService.callTool(msg.serverId, msg.toolName, msg.args).then(result => {
+                                        this.logService.info(`[AIProduct] MCP tool result: ${result.success ? 'success' : 'failed'}`);
+                                });
+                                break;
+                        }
+                        default: {
+                                this.logService.warn(`[AIProduct] Unknown MCP message type: ${msg.type}`);
+                        }
+                }
+        }
+
+        /**
+         * Returns HTML for the MCP Servers sidebar view.
+         */
+        private getMCPServersHTML(): string {
+                const servers = this.mcpServerService.getServers();
+                const statuses = this.mcpServerService.getAllServerStatuses();
+                const serverIcon = renderIcon('provider', 16);
+
+                let serverList = '';
+                if (servers.length > 0) {
+                        serverList = servers.map(server => {
+                                const status = statuses.find(s => s.config.id === server.id);
+                                const stateColor = status?.state === MCPServerState.Running ? 'var(--vscode-testing-iconPassed)'
+                                        : status?.state === MCPServerState.Error ? 'var(--vscode-testing-iconFailed)'
+                                        : status?.state === MCPServerState.Starting ? 'var(--vscode-editorWarning-foreground)'
+                                        : 'var(--vscode-disabledForeground)';
+                                const stateLabel = status?.state ?? 'stopped';
+                                const toolCount = status?.toolCount ?? 0;
+                                const resourceCount = status?.resourceCount ?? 0;
+
+                                return `
+<div style="padding:8px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--vscode-panel-border);">
+  ${serverIcon}
+  <div style="flex:1;">
+    <div style="font-size:13px;font-weight:500;">${server.name}</div>
+    <div style="font-size:11px;color:var(--vscode-descriptionForeground);">${server.transport}${toolCount > 0 ? ` | ${toolCount} tools` : ''}${resourceCount > 0 ? ` | ${resourceCount} resources` : ''}</div>
+  </div>
+  <span style="font-size:10px;color:${stateColor};text-transform:capitalize;">${stateLabel}</span>
+  <button onclick="window.parent.postMessage({type:'${status?.state === MCPServerState.Running ? 'stopServer' : 'startServer'}',serverId:'${server.id}'},'*')" style="background:var(--vscode-button-background);color:var(--vscode-button-foreground);border:none;padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer;">${status?.state === MCPServerState.Running ? 'Stop' : 'Start'}</button>
+</div>`;
+                        }).join('');
+                }
+
+                if (!serverList) {
+                        const emptyIcon = renderIcon('provider', 32);
+                        serverList = `
+<div style="display:flex;flex-direction:column;align-items:center;padding:48px 16px;text-align:center;">
+  <div style="color:var(--vscode-disabledForeground);margin-bottom:12px;">${emptyIcon}</div>
+  <div style="font-size:14px;font-weight:500;">No MCP Servers</div>
+  <div style="font-size:12px;color:var(--vscode-descriptionForeground);margin-top:4px;">Configure MCP servers in Settings to extend VibeCode with external tools and resources</div>
+</div>`;
+                }
+
+                return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+body { font-family: var(--vscode-font-family); margin: 0; padding: 0; background: var(--vscode-sideBar-background); color: var(--vscode-foreground); }
+button:hover { opacity: 0.9; }
+</style></head><body>${serverList}</body></html>`;
         }
 }
 

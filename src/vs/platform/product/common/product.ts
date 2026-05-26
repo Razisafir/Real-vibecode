@@ -6,15 +6,15 @@
 import { IProductConfiguration } from '../../../../base/common/product.js';
 
 const product: IProductConfiguration = {
-	version: '1.121.0-dev',
-	nameShort: 'Real Vibecode',
-	nameLong: 'Real Vibecode',
-	applicationName: 'real-vibecode',
-	dataFolderName: '.real-vibecode',
-	urlProtocol: 'real-vibecode',
-	reportIssueUrl: 'https://github.com/Razisafir/Real-vibecode/issues/new',
-	licenseName: 'MIT',
-	licenseUrl: 'https://github.com/Razisafir/Real-vibecode/blob/main/LICENSE.txt',
+        version: '1.121.0-dev',
+        nameShort: 'VibeCode',
+        nameLong: 'VibeCode',
+        applicationName: 'vibecode',
+        dataFolderName: '.vibecode',
+        urlProtocol: 'vibecode',
+        reportIssueUrl: 'https://github.com/Razisafir/Real-vibecode/issues/new',
+        licenseName: 'MIT',
+        licenseUrl: 'https://github.com/Razisafir/Real-vibecode/blob/main/LICENSE.txt',
 };
 
 export default product;

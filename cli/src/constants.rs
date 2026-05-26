@@ -7,27 +7,27 @@
  *--------------------------------------------------------------------------------------------*/
 
 /// The application name used for binary naming and process identification
-pub const APPLICATION_NAME: &str = "real-vibecode";
+pub const APPLICATION_NAME: &str = "vibecode";
 
 /// The full product name displayed in CLI help text and version output
-pub const PRODUCT_NAME_LONG: &str = "Real Vibecode";
+pub const PRODUCT_NAME_LONG: &str = "VibeCode";
 
 /// The quality-less product name (no "Insiders" or "OSS" suffix)
-pub const QUALITYLESS_PRODUCT_NAME: &str = "Real Vibecode";
+pub const QUALITYLESS_PRODUCT_NAME: &str = "VibeCode";
 
 /// Default data parent directory (relative to $HOME)
-pub const DEFAULT_DATA_PARENT_DIR: &str = ".real-vibecode";
+pub const DEFAULT_DATA_PARENT_DIR: &str = ".vibecode";
 
 /// Server data parent directory (relative to $HOME)
-pub const SERVER_DATA_PARENT_DIR: &str = ".real-vibecode-server";
+pub const SERVER_DATA_PARENT_DIR: &str = ".vibecode-server";
 
 /// User agent string for HTTP requests from the CLI
 pub fn get_default_user_agent(version: &str) -> String {
-    format!("real-vibecode-launcher/{}", version)
+    format!("vibecode-launcher/{}", version)
 }
 
 /// CLI update endpoint — override via VSCODE_CLI_UPDATE_ENDPOINT env var
-pub const CLI_UPDATE_ENDPOINT_ENV: &str = "REAL_VIBECODE_CLI_UPDATE_ENDPOINT";
+pub const CLI_UPDATE_ENDPOINT_ENV: &str = "VIBECODE_CLI_UPDATE_ENDPOINT";
 
 /// Product download URL — override via environment variable
-pub const PRODUCT_DOWNLOAD_URL_ENV: &str = "REAL_VIBECODE_DOWNLOAD_URL";
+pub const PRODUCT_DOWNLOAD_URL_ENV: &str = "VIBECODE_DOWNLOAD_URL";

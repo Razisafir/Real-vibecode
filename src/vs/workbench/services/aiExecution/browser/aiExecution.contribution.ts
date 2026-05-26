@@ -8,7 +8,7 @@
  *  No fictional absorption. No dead side-effect imports. Every registered
  *  singleton has its constructor dependencies also registered.
  *
- *  REGISTERED SINGLETONS (25):
+ *  REGISTERED SINGLETONS (28 + 3 formerly-orphaned + 1 MCP = 32):
  *    EXECUTION (5):  AutonomousExecutionLoop, TerminalExecutionBridge, TerminalSessionManager,
  *                     AutonomousExecution, ExecutionSandbox
  *    EDITING (2):    TransactionalEdit, CodeEditing
@@ -20,16 +20,17 @@
  *    ORCHESTRATION (2): MultiAgentExecution, ContextWindowOptimization
  *    UI (1):         RealUIIntegration
  *    STATE (1):      AIUnifiedState
+ *    ORCHESTRATION-FORMERLY-ORPHANED (3): AgentOrchestrator, ExecutionGraph, AIContext
+ *    MCP (1):        MCPServer
  *
  *  RE-REGISTERED (3 - still injected by consumers, absorption was fictional):
  *    GitWorkflow, RepositoryIntelligence, AIExecution
  *
- *  KNOWN GAPS:
- *    - IObservabilityService: Removed from AIProductContribution (was injected but never used)
- *    - ITokenEstimationService: Removed from AIProductContribution (was injected but never used)
- *    - IAgentOrchestratorService: Has implementation but not registered (not injected by any registered singleton)
- *    - IExecutionGraphService: Has implementation but not registered (not injected by any registered singleton)
- *    - IAIContextService: Has implementation but not registered (not injected by any registered singleton)
+ *  FIXED IN THIS VERSION:
+ *    - IAgentOrchestratorService: Now registered (was orphaned)
+ *    - IExecutionGraphService: Now registered (was orphaned)
+ *    - IAIContextService: Now registered (was orphaned)
+ *    - IMCPServerService: New MCP server support service
  *
  *  PHASE 32 FIXES:
  *    - session.id scoping bug in TerminalExecutionBridgeService FIXED
@@ -112,6 +113,18 @@ import { RepositoryIntelligenceService } from './repositoryIntelligenceService.j
 import { IAIExecutionService } from '../common/aiExecutionService.js';
 import { AIExecutionService } from './aiExecutionService.js';
 
+// ---- ORCHESTRATION (3 previously orphaned, now registered) ----
+import { IAgentOrchestratorService } from '../common/agentOrchestratorService.js';
+import { AgentOrchestratorService } from './agentOrchestratorService.js';
+import { IExecutionGraphService } from '../common/executionGraphService.js';
+import { ExecutionGraphService } from './executionGraphService.js';
+import { IAIContextService } from '../common/aiContextService.js';
+import { AIContextService } from './aiContextService.js';
+
+// ---- MCP Server Support ----
+import { IMCPServerService } from '../common/mcpServerService.js';
+import { MCPServerService } from './mcpServerService.js';
+
 // ---- Real UI Product Contribution ----
 import './aiProductContribution.js';
 
@@ -173,3 +186,11 @@ registerSingleton(IAIUnifiedStateService, AIUnifiedStateService, InstantiationTy
 registerSingleton(IGitWorkflowService, GitWorkflowService, InstantiationType.Delayed);
 registerSingleton(IRepositoryIntelligenceService, RepositoryIntelligenceService, InstantiationType.Delayed);
 registerSingleton(IAIExecutionService, AIExecutionService, InstantiationType.Delayed);
+
+// ORCHESTRATION (3 previously orphaned, now registered)
+registerSingleton(IAgentOrchestratorService, AgentOrchestratorService, InstantiationType.Delayed);
+registerSingleton(IExecutionGraphService, ExecutionGraphService, InstantiationType.Delayed);
+registerSingleton(IAIContextService, AIContextService, InstantiationType.Delayed);
+
+// MCP SERVER SUPPORT
+registerSingleton(IMCPServerService, MCPServerService, InstantiationType.Delayed);
